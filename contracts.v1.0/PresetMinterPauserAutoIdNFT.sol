@@ -54,6 +54,19 @@ contract PresetMinterPauserAutoIdNFT is
 
     string private _baseTokenURI;
 
+    function _isContract(address addr) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(addr)
+        }
+        return size > 0;
+    }
+
+    modifier notContract() {
+        require((!_isContract(msg.sender)) && (msg.sender == tx.origin), "contract not allowed");
+        _;
+    }
+
     /**
      * @dev Grants `DEFAULT_ADMIN_ROLE`, `MINTER_ROLE` and `PAUSER_ROLE` to the
      * account that deploys the contract.

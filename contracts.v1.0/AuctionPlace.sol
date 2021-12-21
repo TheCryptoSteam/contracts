@@ -20,11 +20,15 @@ import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "./MetaInfoDb.sol";
 
 contract AuctionPlace is Context,AccessControlEnumerable{
 
-    address immutable moneyTokenAddr;
+    address public moneyTokenAddr;
     address immutable nftAddr;
+    address public metaInfoDbAddr;
+    address public signPublicKey;
+    mapping(bytes16=>uint256) public actionUUIDs;
 
     struct Auction{
         uint256 tokenId; //nft token id
@@ -44,9 +48,11 @@ contract AuctionPlace is Context,AccessControlEnumerable{
 
     mapping(uint256/*tokenId*/=>mapping(address => uint/*price*/)) pendingReturns;
 
-    constructor(address nftAddr_,address moneyTokenAddr_){
+    constructor(address nftAddr_,address moneyTokenAddr_,address metaInfoDbAddr_,address signPublicKey_){
         moneyTokenAddr=moneyTokenAddr_;
         nftAddr=nftAddr_;
+        metaInfoDbAddr=metaInfoDbAddr_;
+        signPublicKey=signPublicKey_;
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
 
@@ -76,12 +82,22 @@ contract AuctionPlace is Context,AccessControlEnumerable{
         return auction.highestBidder!=address(0);
     }
 
-    function startAnAuction(uint256 tokenId,uint biddingTime_, address beneficiary_) public {
+    function setSignPublicKey(address signPublicKey_) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "AuctionPlace: must have admin role");
+        signPublicKey = signPublicKey_;
+    }
+
+    function setMoneyTokenAddr(address addr) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "AuctionPlace: must have admin role to setMoneyTokenAddr");
+        moneyTokenAddr = addr;
+    }    
+
+    function startAnAuction(uint256 tokenId,uint biddingTime_, address beneficiary_, uint256 minPrice) public {
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "AuctionPlace: must have admin role to startAnAuction");
         require(ERC721(nftAddr).ownerOf(tokenId)== beneficiary_,"AuctionPlace: NFT does not belong to the beneficiary");
         require(!hasRunningAuction(tokenId),"AuctionPlace: already auctions going on");
 
-        auctions[tokenId].push(Auction(tokenId, beneficiary_,block.timestamp + biddingTime_,address(0),0,false));
+        auctions[tokenId].push(Auction(tokenId, beneficiary_,block.timestamp + biddingTime_,address(0),minPrice,false));
 
         ERC721(nftAddr).transferFrom(beneficiary_,address(this),tokenId);
     }
@@ -90,10 +106,11 @@ contract AuctionPlace is Context,AccessControlEnumerable{
         require(hasRunningAuction(tokenId),"AuctionPlace: Auction not started");
         Auction[] storage aucts=auctions[tokenId];
         Auction storage currAction=aucts[aucts.length-1];
+        require(currAction.beneficiary!=_msgSender(),"AuctionPlace: The NFT token owner should not bid");
 
         require(block.timestamp <= currAction.auctionEndTime, "AuctionPlace: The auction has already ended.");
 
-        require(price >= currAction.highestBid, "AuctionPlace: There's already a higher bid. Try bidding higher!");
+        require(price > currAction.highestBid, "AuctionPlace: There's already a higher bid. Try bidding higher!");
 
 
         if(currAction.highestBid != 0) {
@@ -118,25 +135,52 @@ contract AuctionPlace is Context,AccessControlEnumerable{
         }
     }
 
-    function auctionEnd(uint256 tokenId) public {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "AuctionPlace: must have admin role to startAnAuction");
+    function auctionEnd(uint256 tokenId, bytes16 actionUUID, uint8 _v, bytes32 _r, bytes32 _s) public {
 
-        require(hasRunningAuction(tokenId),"");
+        require(hasRunningAuction(tokenId),"AuctionPlace: The auction of the token has running");
 
         Auction[] storage aucts=auctions[tokenId];
         Auction storage currAction=aucts[aucts.length-1];
 
 
         // Conditions
-        require(block.timestamp >= currAction.auctionEndTime, "AuctionPlace: The auction hasn't ended yet.");
+        require(block.timestamp >= currAction.auctionEndTime, "AuctionPlace: The auction hasn't ended yet");
         require(!currAction.ended, "AuctionPlace: auctionEnd has already been called.");
+        MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
+
+        if (!hasRole(DEFAULT_ADMIN_ROLE, _msgSender())){
+            require(actionUUIDs[actionUUID]==0,"AuctionPlace: action has been executed");
+            bytes32 messageHash =  keccak256(
+                abi.encodePacked(
+                    signPublicKey,
+                    tokenId,
+                    actionUUID,
+                    "auctionEnd",
+                    address(this)
+                )
+            );
+            bool isValidSignature = metaInfo.isValidSignature(messageHash,signPublicKey,_v,_r,_s);
+            require(isValidSignature,"AuctionPlace: signature error");
+            actionUUIDs[actionUUID]=block.timestamp;
+        }
+
 
         // Effects
         currAction.ended = true;
         emit AuctionEnded(tokenId,currAction.highestBidder, currAction.highestBid);
 
         // Interaction
-        ERC20(moneyTokenAddr).transfer(currAction.beneficiary,currAction.highestBid);
+
+
+        uint256 total=currAction.highestBid;
+        // uint256 busdBonusAmount=total*metaInfo.BUSDBonusPoolRate()/FRACTION_INT_BASE;
+        uint256 busdOrgAmount=total*metaInfo.BUSDOrganizeRate()/FRACTION_INT_BASE;
+        uint256 busdTeamAmount=total*metaInfo.BUSDTeamRate()/FRACTION_INT_BASE;
+
+        ERC20(moneyTokenAddr).transfer(currAction.beneficiary,total-busdOrgAmount-busdTeamAmount);
+        ERC20(moneyTokenAddr).transfer(metaInfo.BUSDOrganizeAddress(),busdOrgAmount);
+        ERC20(moneyTokenAddr).transfer(metaInfo.BUSDTeamAddress(),busdTeamAmount);
         ERC721(nftAddr).transferFrom(address(this),currAction.highestBidder,tokenId);
+
     }
 }

@@ -15,6 +15,7 @@
 
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -58,6 +59,8 @@ contract MarketPlace is AccessControlEnumerable
     }
 
     function sell(address nftAddr, uint256 tokenId, address priceToken, uint256 price, uint256 validPeriod) external{
+        MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
+        require(priceToken==metaInfo.rubyAddress(),"MarketPlace: Ruby Only");
         require(supportNFTs.contains(nftAddr),"MarketPlace: Unknown NFT");
         require(IERC721(nftAddr).ownerOf(tokenId)==_msgSender(),"MarketPlace: Not your NFT");
 
@@ -93,9 +96,9 @@ contract MarketPlace is AccessControlEnumerable
         require(block.timestamp < info.createTimestamp+info.validPeriod,"MarketPlace: Out of the available time");
 
         MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
-        uint256 fees =  info.orderPrice * metaInfo.marketFeesRate() / FRACTION_INT_BASE;
+        uint256 fees = info.orderPrice * metaInfo.marketFeesRate() / FRACTION_INT_BASE;
 
-        require(IERC20(info.priceToken).balanceOf(_msgSender())>=(info.orderPrice+fees),"MarketPlace: Not enough price token");
+        require(IERC20(info.priceToken).balanceOf(_msgSender())>=info.orderPrice,"MarketPlace: Not enough price token");
 
         orderTokenIds[nftAddr].remove(tokenId);
         userOrderTokenIds[nftAddr][_msgSender()].remove(tokenId);
@@ -104,14 +107,22 @@ contract MarketPlace is AccessControlEnumerable
         uint256 orderPrice = info.orderPrice;
         delete orderInfos[nftAddr][tokenId];
 
+        uint256 rubyBonusAmount=fees*metaInfo.RUBYBonusPoolRate()/FRACTION_INT_BASE;
+        uint256 rubyOrgAmount=fees*metaInfo.RUBYOrganizeRate()/FRACTION_INT_BASE;
+        uint256 rubyTeamAmount=fees*metaInfo.RUBYTeamRate()/FRACTION_INT_BASE;
+
+        IERC20(priceToken).transferFrom(_msgSender(), metaInfo.RUBYBonusPoolAddress(), rubyBonusAmount);
+        IERC20(priceToken).transferFrom(_msgSender(), metaInfo.RUBYOrganizeAddress(), rubyOrgAmount);
+        IERC20(priceToken).transferFrom(_msgSender(), metaInfo.RUBYTeamAddress(), rubyTeamAmount);
+        ERC20Burnable(priceToken).burnFrom(_msgSender(), fees-rubyBonusAmount-rubyOrgAmount-rubyTeamAmount);
+
         IERC20(priceToken).transferFrom(_msgSender(), owner, orderPrice-fees);
-        IERC20(priceToken).transferFrom(_msgSender(), metaInfo.marketFeesReceiverAddress(), fees);
         IERC721(nftAddr).transferFrom(address(this), _msgSender(), tokenId);
 
         emit NewTrade(nftAddr,tokenId);
     }
 
-    function addNFTs(address [] memory nftAddrArray) public  {
+    function addNFTs(address [] calldata nftAddrArray) external  {
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MarketPlace: must have admin role to addNFTs");
         for(uint256 i=0;i<nftAddrArray.length;++i){
             supportNFTs.add(nftAddrArray[i]);

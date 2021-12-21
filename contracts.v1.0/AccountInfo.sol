@@ -23,7 +23,6 @@ import "./MetaInfoDb.sol";
 import "./ChestToken.sol";
 import "./PlayerStatusQueryInterface.sol";
 
-
 contract AccountInfo is AccessControl
 {
     using EnumerableSet for EnumerableSet.UintSet;
@@ -46,6 +45,19 @@ contract AccountInfo is AccessControl
 
     mapping(address=>EnumerableSet.UintSet) hatchingNestsSet ;
 
+    function _isContract(address addr) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(addr)
+        }
+        return size > 0;
+    }
+
+    modifier notContract() {
+        require((!_isContract(msg.sender)) && (msg.sender == tx.origin), "contract not allowed");
+        _;
+    }
+
     constructor(address metaInfoDbAddr_,address signPublicKey_){
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         signPublicKey=signPublicKey_;
@@ -54,7 +66,7 @@ contract AccountInfo is AccessControl
     }
 
 
-    function newAccount(address account,uint256 foodPoints_,uint256 hatchingNests_,uint256 expiresAt, uint8 _v, bytes32 _r, bytes32 _s) public {
+    function newAccount(address account,uint256 foodPoints_,uint256 hatchingNests_/* default 1 */,uint256 expiresAt, uint8 _v, bytes32 _r, bytes32 _s) public {
         //require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "AccountInfo: must have admin role to newAccount");
         require(infos[account].account==address(0),"AccountInfo: account exists");
 
@@ -134,16 +146,15 @@ contract AccountInfo is AccessControl
         return infos[account].foodPoints;
     }
 
-    function openFoodChest(address account) public {
-        require(!_msgSender().isContract(),"AccountInfo: openFoodChest can not be called by contract");
+    function openFoodChest(address account) public notContract {
 
         MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
         ChestToken chestToken=ChestToken(metaInfo.chestAddressArray(FOOD_CHEST));
         require(chestToken.balanceOf(_msgSender())>0,"AccountInfo: not enough Food Chest");
 
-        uint256 index=MathEx.probabilisticRandom5(metaInfo.getOutputFoodProbabilityArray());
+        uint256 index=metaInfo.probabilisticRandom5(metaInfo.getOutputFoodProbabilityArray());
         (uint256 beginValue,uint256 endValue)=metaInfo.outputFoodScopeArray(index);
-        uint256 amount=MathEx.scopeRand(beginValue,endValue);
+        uint256 amount=metaInfo.scopeRand(beginValue,endValue);
 
         chestToken.burnFrom(_msgSender(), 1);
         //ERC20Burnable(metaInfo.rubyAddress()).burnFrom(_msgSender(), hatchCostInfoFather.rubyCost+hatchCostInfoMonther.rubyCost);
@@ -155,7 +166,7 @@ contract AccountInfo is AccessControl
         return hatchingNestsSet[account].values();
     }
 
-    function hasRewardHatchingNestsWorking(address account) view public returns(bool){
+    function hasRewardHatchingNestsWorking(address account) view external returns(bool){
         return hatchingNests(account).length>infos[account].hatchingNests;
     }
 
@@ -165,11 +176,10 @@ contract AccountInfo is AccessControl
     }
 
 
-
     //EggNFT contract call it 
     function putInHatchingNest(address account, uint256 eggTokenId) public returns(bool){
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "AccountInfo: must have admin role to putInHatchingNest");
-        require(infos[account].hatchingNests>hatchingNestsSet[account].length(),"AccountInfo: no enought HatchingNests");
+        require(hatchingNestsCount(account)>hatchingNestsSet[account].length(),"AccountInfo: no enought HatchingNests");
         return hatchingNestsSet[account].add(eggTokenId);
     }
 

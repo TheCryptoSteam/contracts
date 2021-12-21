@@ -64,9 +64,13 @@ contract CstERC20Token is ERC20Permit, VaultOwned {
         return 9;
     }
 
-
     function mint(address account_, uint256 amount_) external onlyVault() {
         _mint(account_, amount_);
+    }
+
+    function _mint(address account, uint256 amount) internal virtual override {
+        require(ERC20.totalSupply() + amount <= cap(), "CstERC20Token: cap exceeded");
+        super._mint(account, amount);
     }
 
     function burn(uint256 amount) public virtual {
@@ -77,7 +81,7 @@ contract CstERC20Token is ERC20Permit, VaultOwned {
         _burnFrom(account_, amount_);
     }
 
-    function _burnFrom(address account_, uint256 amount_) public virtual {
+    function _burnFrom(address account_, uint256 amount_) internal virtual {
         uint256 decreasedAllowance_ = allowance(account_, msg.sender)-amount_;
 
         _approve(account_, msg.sender, decreasedAllowance_);

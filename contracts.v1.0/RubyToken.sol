@@ -37,6 +37,7 @@ contract RubyToken is ERC20PresetMinterPauser
     }
 
     function setMetaInfoAddress(address metaInfoDbAddr_) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "RubyToken: must have admin role");
         metaInfoDbAddr=metaInfoDbAddr_;
     }
 

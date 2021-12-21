@@ -55,7 +55,7 @@ contract EggNFT is PresetMinterPauserAutoIdNFT
 
     function remainingHatchDuration(uint256 tokenId) view public returns(uint256){
         require(_exists(tokenId), "EggNFT: token must be minted");
-        EggInfo storage eggInfo  = infos[tokenId];  
+        EggInfo storage eggInfo  = infos[tokenId];
         if (eggInfo.hatchingBeginTime==0){
             return eggInfo.remainingHatchDuration;
         }else{
@@ -98,8 +98,7 @@ contract EggNFT is PresetMinterPauserAutoIdNFT
     }
 
 
-    function hatchNow(uint256 tokenId) public{
-        require(!_msgSender().isContract(),"EggNFT: hatchNow can not be called by contract");
+    function hatchNow(uint256 tokenId) public notContract {
         stopHatching(tokenId);
         require(infos[tokenId].hatchingBeginTime==0, "EggNFT: the token is hatching");
         require(remainingHatchDuration(tokenId)==0,"EggNFT: hatching not end");
@@ -118,8 +117,7 @@ contract EggNFT is PresetMinterPauserAutoIdNFT
     }
 
 
-    function mint(uint256 fatherTokenId,uint256 motherTokenId,address to) public {
-        require(!_msgSender().isContract(),"EggNFT: mint can not be called by contract");
+    function mint(uint256 fatherTokenId,uint256 motherTokenId,address to) public notContract {
         DragonNFT dragonNFT=DragonNFT(MetaInfoDb(metaInfoDbAddr).dragonNFTAddr());
         require(dragonNFT.ownerOf(fatherTokenId)==_msgSender(),"EggNFT: father is not yours");
         require(dragonNFT.ownerOf(motherTokenId)==_msgSender(),"EggNFT: mother is not yours");
@@ -130,11 +128,26 @@ contract EggNFT is PresetMinterPauserAutoIdNFT
         HatchCostInfo memory hatchCostInfoMonther = dragonNFT.hatchCostInfo(motherTokenId);
 
         MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
-        require(ERC20Burnable(metaInfo.CSTAddress()).balanceOf(_msgSender())>=(hatchCostInfoFather.CSTCost+hatchCostInfoMonther.CSTCost),"No enought CST");
-        require(ERC20Burnable(metaInfo.rubyAddress()).balanceOf(_msgSender())>=(hatchCostInfoFather.rubyCost+hatchCostInfoMonther.rubyCost),"No enought RUBY");
+        uint256 totalCst=hatchCostInfoFather.CSTCost+hatchCostInfoMonther.CSTCost;
+        uint256 totalRuby=hatchCostInfoFather.rubyCost+hatchCostInfoMonther.rubyCost;
+        require(ERC20Burnable(metaInfo.CSTAddress()).balanceOf(_msgSender())>=totalCst,"No enought CST");
+        require(ERC20Burnable(metaInfo.rubyAddress()).balanceOf(_msgSender())>=totalRuby,"No enought RUBY");
 
-        ERC20Burnable(metaInfo.rubyAddress()).burnFrom(_msgSender(), hatchCostInfoFather.rubyCost+hatchCostInfoMonther.rubyCost);
-        IERC20(metaInfo.CSTAddress()).transferFrom(_msgSender(),metaInfo.CSTPoolAddress(),hatchCostInfoFather.CSTCost+hatchCostInfoMonther.CSTCost);
+        {
+        uint256 rubyBonusAmount=totalRuby*metaInfo.RUBYBonusPoolRate()/FRACTION_INT_BASE;
+        uint256 rubyOrgAmount=totalRuby*metaInfo.RUBYOrganizeRate()/FRACTION_INT_BASE;
+        uint256 rubyTeamAmount=totalRuby*metaInfo.RUBYTeamRate()/FRACTION_INT_BASE;
+        IERC20(metaInfo.rubyAddress()).transferFrom(_msgSender(),metaInfo.RUBYBonusPoolAddress(),rubyBonusAmount);
+        IERC20(metaInfo.rubyAddress()).transferFrom(_msgSender(),metaInfo.RUBYOrganizeAddress(),rubyOrgAmount);
+        IERC20(metaInfo.rubyAddress()).transferFrom(_msgSender(),metaInfo.RUBYTeamAddress(),rubyTeamAmount);
+        ERC20Burnable(metaInfo.rubyAddress()).burnFrom(_msgSender(), totalRuby-rubyBonusAmount-rubyOrgAmount-rubyTeamAmount);
+
+        uint256 cstBonusAmount=totalCst*metaInfo.CSTBonusPoolRate()/FRACTION_INT_BASE;
+        uint256 cstOrgAmount=totalCst*metaInfo.CSTOrganizeRate()/FRACTION_INT_BASE;
+        IERC20(metaInfo.CSTAddress()).transferFrom(_msgSender(),metaInfo.CSTBonusPoolAddress(),cstBonusAmount);
+        IERC20(metaInfo.CSTAddress()).transferFrom(_msgSender(),metaInfo.CSTOrganizeAddress(),cstOrgAmount);
+        ERC20Burnable(metaInfo.CSTAddress()).burnFrom(_msgSender(), totalCst-cstBonusAmount-cstOrgAmount);
+        }
 
         dragonNFT.subHatchTimes(fatherTokenId);
         dragonNFT.subHatchTimes(motherTokenId);

@@ -91,6 +91,12 @@ uint256 constant HATCH_MAX_TIMES =7  ;
 uint256 constant DEFAULT_HATCHING_DURATION = 5 days;
 
 
+interface IRandomHolder
+{
+    function getSeed() view external returns(uint256) ;
+}
+
+
 contract MetaInfoDb is AccessControlEnumerable
 {
     address public CSTAddress; //CST token address
@@ -101,7 +107,30 @@ contract MetaInfoDb is AccessControlEnumerable
     address public eggNFTAddr;//EggNFT address
     address public accountInfoAddr; //AccountInfo contract
 
-    address public CSTPoolAddress;
+    address public CSTBonusPoolAddress;
+    uint256 public CSTBonusPoolRate; //20%
+
+    address public CSTOrganizeAddress;
+    uint256 public CSTOrganizeRate; //10%
+
+    address public RUBYBonusPoolAddress;
+    uint256 public RUBYBonusPoolRate; //20%
+
+    address public RUBYOrganizeAddress;
+    uint256 public RUBYOrganizeRate; //10%
+
+    address public RUBYTeamAddress;
+    uint256 public RUBYTeamRate; //20%
+
+    address public BUSDBonusPoolAddress;
+    uint256 public BUSDBonusPoolRate; //70%
+
+    address public BUSDOrganizeAddress;
+    uint256 public BUSDOrganizeRate; //10%
+
+    address public BUSDTeamAddress;
+    uint256 public BUSDTeamRate; //20%
+
     address public marketFeesReceiverAddress;
 
     //marketParams
@@ -138,8 +167,6 @@ contract MetaInfoDb is AccessControlEnumerable
     uint256 [6] public elementHeredityProbArray;
 
 
-    uint256 public defaultHatchingTimes = 1;
-
     uint256 [5/**rarity */][5/**star */] [5/**rarity */] public starUpdateTable; 
 
 
@@ -152,11 +179,12 @@ contract MetaInfoDb is AccessControlEnumerable
 
     uint256 [5] public rewardHatchingNestsCST;
 
+    IRandomHolder private randomHolder;
+
     constructor(address CSTAddr,address rubyAddr,address [3] memory chestAddrArray,address playerStatusQueryInterface_){
         CSTAddress=CSTAddr;
         rubyAddress=rubyAddr;
         chestAddressArray=chestAddrArray;
-
         playerStatusQueryInterface=playerStatusQueryInterface_;
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
 
@@ -219,8 +247,17 @@ contract MetaInfoDb is AccessControlEnumerable
 
         qualityFactors=[0,0,1,2,3];
 
-        marketFeesRate=350;//3%
+        marketFeesRate=425;//4.25%
         marketFeesReceiverAddress=_msgSender();
+
+        CSTBonusPoolRate=2000; //20%
+        CSTOrganizeRate=1000; //10%
+        RUBYBonusPoolRate=2000; //20%
+        RUBYOrganizeRate=1000; //10%
+        RUBYTeamRate=2000; //20%
+        BUSDBonusPoolRate=7000; //70%
+        BUSDOrganizeRate=1000; //10%
+        BUSDTeamRate=2000; //20%
 
         outputFoodProbabilityArray=[790,160,40,10,0];
         outputFoodScopeArray[NORMAL_RARITY]=Scope(2000 wei,9999 wei);
@@ -351,6 +388,11 @@ contract MetaInfoDb is AccessControlEnumerable
         outputFoodProbabilityArray=outputFoodProbabilityArray_;
     }
 
+    function setRandomHolderInterface(address randomHolder_) external{
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setRandomHolderInterface");
+        randomHolder=IRandomHolder(randomHolder_);
+    }
+
     function setMarketFeesRate(uint256 marketFeesRate_) external{
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setMarketFeesRate");
         require(marketFeesRate_<FRACTION_INT_BASE,"MetaInfoDb: marketFeesRate invalid");
@@ -372,11 +414,6 @@ contract MetaInfoDb is AccessControlEnumerable
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setRarityParam");
         require(rarity<=LEGEND_RARITY);
         rarityProbabilityFloatArray[kind][rarity]=probabilityFloat;
-    }
-
-    function setDefaultHatchingTimes(uint256 times) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setDefaultHatchingTimes");
-        defaultHatchingTimes=times;
     }
 
     function allRarityProbabilities() view public returns(uint256 [5] memory){
@@ -448,9 +485,78 @@ contract MetaInfoDb is AccessControlEnumerable
         accountInfoAddr = addr;
     }
 
-    function setCSTPoolAddress(address addr) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setCSTPoolAddress");
-        CSTPoolAddress = addr;
+    function setCSTBonusPoolAddress(address addr) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setCSTBonusPoolAddress");
+        CSTBonusPoolAddress = addr;
+    }
+    function setCSTBonusPoolRate(uint256 rate) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setCSTBonusPoolRate");
+        CSTBonusPoolRate = rate;
+    }
+
+
+    function setCSTOrganizeAddress(address addr) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setCSTOrganizeAddress");
+        CSTOrganizeAddress = addr;
+    }
+
+    function setCSTOrganizeRate(uint256 rate) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setCSTOrganizeRate");
+        CSTOrganizeRate = rate;
+    }
+
+    function setRUBYBonusPoolAddress(address addr) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setRUBYBonusPoolAddress");
+        RUBYBonusPoolAddress = addr;
+    }
+    function setRUBYBonusPoolRate(uint256 rate) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setRUBYBonusPoolRate");
+        RUBYBonusPoolRate = rate;
+    }
+
+    function setRUBYOrganizeAddress(address addr) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setRUBYOrganizeAddress");
+        RUBYOrganizeAddress = addr;
+    }
+    function setRUBYOrganizeRate(uint256 rate) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setRUBYOrganizeRate");
+        RUBYOrganizeRate = rate;
+    }
+
+    function setRUBYTeamAddress(address addr) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setRUBYTeamAddress");
+        RUBYTeamAddress = addr;
+    }
+    function setRUBYTeamRate(uint256 rate) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setRUBYTeamRate");
+        RUBYTeamRate = rate;
+    }
+
+    function setBUSDBonusPoolAddress(address addr) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setBUSDBonusPoolAddress");
+        BUSDBonusPoolAddress = addr;
+    }
+    function setBUSDBonusPoolRate(uint256 rate) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setBUSDBonusPoolRate");
+        BUSDBonusPoolRate = rate;
+    }
+
+    function setBUSDOrganizeAddress(address addr) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setBUSDOrganizeAddress");
+        BUSDOrganizeAddress = addr;
+    }
+    function setBUSDOrganizeRate(uint256 rate) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setBUSDOrganizeRate");
+        BUSDOrganizeRate = rate;
+    }
+
+    function setBUSDTeamAddress(address addr) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setBUSDTeamAddress");
+        BUSDTeamAddress = addr;
+    }
+    function setBUSDTeamRate(uint256 rate) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setBUSDTeamRate");
+        BUSDTeamRate = rate;
     }
 
     function getStarUpdateTable(uint256 rarity,uint256 star) view public returns(uint256[5] memory){
@@ -528,8 +634,12 @@ contract MetaInfoDb is AccessControlEnumerable
     }
 
 
+    function rand3() public view returns(uint256) {
+        return MathEx.randEx(randomHolder.getSeed());
+    }
+
     function calcRandRarity(uint256 kind) view public returns(uint256){
-        return MathEx.probabilisticRandom5(rarityProbabilityFloatArray[kind]);
+        return probabilisticRandom5(rarityProbabilityFloatArray[kind]);
     }
 
     function calcRandRarityR(uint256 kind, uint256 rnd) view public returns(uint256){
@@ -542,5 +652,49 @@ contract MetaInfoDb is AccessControlEnumerable
         return (addr==publicKey);
     }
 
+    function scopeRand(uint256 beginNumber,uint256 endNumber) public view returns(uint256){
+        return MathEx.rand(endNumber-beginNumber+1,randomHolder.getSeed())+beginNumber;
+    }
 
+
+    function probabilisticRandom4(uint256 [4] memory probabilities) view public returns(uint256/**index*/){
+
+        uint256 totalRarityProbability=0;
+        for (uint256 i=0;i<4;++i){
+            totalRarityProbability+=probabilities[i];
+            if (i>0){
+                probabilities[i]+=probabilities[i-1];
+            }
+        }
+
+        uint256 parityPoint=MathEx.rand(totalRarityProbability,randomHolder.getSeed());
+        for (uint256 i=0;i<4;++i){
+            if (parityPoint<probabilities[i]){
+                return i;
+            }
+        }
+
+        return 0;
+    }
+
+
+    function probabilisticRandom5(uint256 [5] memory probabilities) view  public returns(uint256/**index*/){
+
+        uint256 totalRarityProbability=0;
+        for (uint256 i=0;i<5;++i){
+            totalRarityProbability+=probabilities[i];
+            if (i>0){
+                probabilities[i]+=probabilities[i-1];
+            }
+        }
+
+        uint256 parityPoint=MathEx.rand(totalRarityProbability,randomHolder.getSeed());
+        for (uint256 i=0;i<5;++i){
+            if (parityPoint<probabilities[i]){
+                return i;
+            }
+        }
+
+        return 0;
+    }
 }

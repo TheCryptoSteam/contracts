@@ -44,7 +44,7 @@ uint256 constant PARTS_HEAD_ID=PARTS_IDS+PARTS_HEAD;
 uint256 constant PARTS_BODY_ID=PARTS_IDS+PARTS_BODY;
 uint256 constant PARTS_LIMBS_ID=PARTS_IDS+PARTS_LIMBS;
 uint256 constant PARTS_WINGS_ID=PARTS_IDS+PARTS_WINGS;
-//
+
 uint256 constant INFO_FIELDS_COUNT=SPEED_VALUE+1;
 uint256 constant INFO_FIELDSEX_COUNT=PARTS_WINGS_ID+1;
 
@@ -56,16 +56,13 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
     address public metaInfoDbAddr;
     address public signPublicKey;
 
-    //mapping(uint256/** tokenId */=>DragonInfo)  public fields;
     mapping(uint256/** tokenId */=>uint256 [INFO_FIELDS_COUNT])  public fields;
     mapping(uint256/** tokenId */=>uint256 [INFO_FIELDSEX_COUNT])  public fieldsEx;
-    //mapping(uint256/** tokenId */=>DragonInfoEx) public infoExs;
-    //mapping(uint256/** tokenId */=>HeredityInfo) public heredityInfos;
 
     mapping(uint256/**tokenId*/=>address) public lockedTokens;
     mapping(address=>EnumerableSet.UintSet ) internal _lockedTokensOf;
 
-    mapping(uint256/**rarity id */=>uint256/*total*/) internal balanceInRarity;
+    mapping(uint256/**rarity id */=>uint256/*total*/) public balanceInRarity;
 
     uint256 private _currentInfoId;
 
@@ -157,13 +154,11 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
 
     function _mintUlitma(address to,uint256 kind,uint256 seed) internal{
         MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
-        uint256 rnd = MathEx.rand3ex(seed);
+        uint256 rnd = MathEx.randEx(seed);
 
-        //_currentInfoId=0;
+        _currentInfoId=0;
         PresetMinterPauserAutoIdNFT(this).mint(to);
-        //require(_currentInfoId!=0,"DragonNFT: mint id error");
-        //DragonInfo storage info=fields[_currentInfoId];
-        //uint256 [INFO_FIELDS_COUNT] storage info=fields[_currentInfoId];
+        require(_currentInfoId!=0,"DragonNFT: mint id error");
         uint256 [INFO_FIELDSEX_COUNT] storage infoEx=fieldsEx[_currentInfoId];
 
         initDragonInfo(_currentInfoId,CLASS_ULTIMA,kind,0,0,rnd/1e6);
@@ -182,13 +177,9 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
         }
 
         emit NewDragonMinted(fields[_currentInfoId],fieldsEx[_currentInfoId]);
-        //balanceInRarity[info[RARITY]]+=1;
-
-        //infoExs[info.id]=infoEx;
     }
 
-    function mintByChest(address to,uint256 chestKind) public{
-        require(!_msgSender().isContract(),"AccountInfo: openFoodChest can not be called by contract");
+    function mintByChest(address to,uint256 chestKind) public notContract {
 
         require(chestKind==0||chestKind==1,"DragonNFT:chest type must be 0 or 1");
         MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
@@ -241,6 +232,7 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
         uint256 [6] memory parts = [uint256(0),0,0,0,0,0];
 
         MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
+
         if (selectTokenId!=fatherTokenId && selectTokenId!=motherTokenId){
             parts=metaInfo.getPartsProb(0);
         }else{
@@ -269,6 +261,7 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
         }
 
         return rnd/10 % (metaInfo.partsLib(fieldsEx[selectTokenId][ELEMENT_ID],partsIndex))+1;
+
     }
 
 
@@ -311,14 +304,13 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
     function mint(uint256 class,uint256 fatherTokenId,uint256 motherTokenId,address to) public{
         require(hasRole(MINTER_ROLE, _msgSender()), "DragonNFT: must have minter role to mint");
         require(class!=CLASS_ULTIMA,"DragonNFT: must call mintUlitma for Ulitma");
-        uint256 rnd = MathEx.rand3();
+        MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
+        uint256 rnd = metaInfo.rand3();
 
         uint256 selDragonId=selectFromHeredityR(fatherTokenId,motherTokenId, rnd);
         _currentInfoId=0;
         super.mint(to);
         require(_currentInfoId!=0,"DragonNFT: mint id error");
-        //DragonInfo storage info=fields[_currentInfoId];
-        //uint256 [INFO_FIELDS_COUNT] storage info=fields[_currentInfoId];
         uint256 [INFO_FIELDSEX_COUNT] storage infoEx=fieldsEx[_currentInfoId];
         initDragonInfo(_currentInfoId,class,SUPER_CHEST,fatherTokenId, motherTokenId,rnd/1e7);
 
@@ -335,15 +327,10 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
 
         emit NewDragonMinted(fields[_currentInfoId],fieldsEx[_currentInfoId]);
 
-        //balanceInRarity[info[RARITY]]+=1;
-
-        //infoExs[info.id]=infoEx;
-        //heredityInfos[info.id]=genHeredityInfo(info.id,fatherTokenId,motherTokenId);
         _currentInfoId=0;
     }
 
     function _beforeTokenTransfer(address from,address to,uint256 tokenId) internal virtual override{
-        //if (_currentInfo.timestamp!=0 && from==address(0)){
         if (from==address(0)){ //mint
             _currentInfoId=tokenId;
         }
@@ -366,11 +353,10 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
     }
 
 
-    function updateStar(uint256 dragonTokenId,uint256 [] memory foodDragonTokenIds/** dragonNFT as food */) public{
+    function updateStar(uint256 dragonTokenId,uint256 [] calldata foodDragonTokenIds/** dragonNFT as food */) external {
         require(lockedTokens[dragonTokenId]==address(0),"DragonNFT: Locked dragon can not be updateStar");
         MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
 
-        //DragonInfo storage info=fields[dragonTokenId];
         uint256 [INFO_FIELDS_COUNT] storage info=fields[dragonTokenId];
 
         uint256 [5] memory foodDragons=metaInfo.getStarUpdateTable(info[RARITY],info[STAR]);
@@ -400,6 +386,7 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
             balanceInRarity[rarity]-=1;
         }
         delete fields[tokenId];
+        delete fieldsEx[tokenId];
         emit DragonBurned(tokenId);
         //delete infoExs[tokenId];
         //delete heredityInfos[tokenId];
@@ -409,37 +396,6 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
         return  _lockedTokensOf[account].values();
     }
 
-    function lock(uint256 tokenId) public {
-        require(ownerOf(tokenId)==_msgSender(),"DragonNFT: Not your NFT");
-        lockedTokens[tokenId]=_msgSender();
-        _lockedTokensOf[_msgSender()].add(tokenId);
-        //infoExs[tokenId].lockTime=block.timestamp;
-        _transfer(_msgSender(),address(this),tokenId);
-    }
-
-    function unlock(uint256 tokenId,uint256 expiresAt, uint8 _v, bytes32 _r, bytes32 _s) public {
-        if (!hasRole(DEFAULT_ADMIN_ROLE, _msgSender())){
-            require(lockedTokens[tokenId]==_msgSender() , "DragonNFT: Not your NFT");
-            require(expiresAt > block.timestamp, "time expired");
-            bytes32 messageHash =  keccak256(
-                abi.encodePacked(
-                    signPublicKey,
-                    tokenId,
-                    "unlock",
-                    address(this),
-                    expiresAt
-                    )
-                );
-            MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
-            bool isValidSignature = metaInfo.isValidSignature(messageHash,signPublicKey,_v,_r,_s);
-            require(isValidSignature,"signature error");
-        }
-
-        address toAddress = lockedTokens[tokenId];
-        delete lockedTokens[tokenId];
-        _lockedTokensOf[_msgSender()].remove(tokenId);
-        _transfer(address(this),toAddress,tokenId);
-    }
 
     function updateState(uint256 tokenId,uint256 level, uint256 life,uint256 attack,uint256 defense,uint256 speed,uint256 rubyPower,uint256 expiresAt, uint8 _v, bytes32 _r, bytes32 _s) public {
         //require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "DragonNFT: must have admin role");
