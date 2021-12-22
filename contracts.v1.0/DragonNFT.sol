@@ -93,7 +93,6 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
 
     function stakingCSTPower(uint256 tokenId) view public returns(uint256){
         MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
-        //DragonInfo storage info=fields(tokenId);
         uint256 [INFO_FIELDS_COUNT] storage info=fields[tokenId];
         uint256 qf=metaInfo.qualityFactors(info[RARITY]);
         return info[INIT_STAKING_CST_POWER]+(info[LEVEL]-1)*info[INIT_STAKING_CST_POWER]*qf+((((info[LEVEL]/5)^2+(info[LEVEL]/5))/2)*(4^qf))*qf;
@@ -111,7 +110,6 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
         MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
 
         uint256 [INFO_FIELDS_COUNT] storage info=fields[id];
-        //info.timestamp=block.timestamp;
         info[ID]=id;
         info[CLASS]=class;
         info[LEVEL]=1;
@@ -209,7 +207,6 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
         require(fatherTokenId!=0 && motherTokenId!=0, "DragonNFT: parent id must be none zero");
         MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
         uint256 [6] memory elements=metaInfo.getElementHeredityProbArray();
-        //HeredityInfo memory heredityInfoF=genHeredityInfo(0,fatherTokenId,motherTokenId);
         HeredityInfo memory fatherFamily=getHeredityInfo(fatherTokenId);
         HeredityInfo memory motherFamily=getHeredityInfo(motherTokenId);
         uint256 [6] memory dragons=[fatherTokenId,motherTokenId,

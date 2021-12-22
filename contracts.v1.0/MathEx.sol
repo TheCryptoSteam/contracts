@@ -48,33 +48,6 @@ library MathEx
         return (rnd % (endNumber-beginNumber+1))+beginNumber;
     }
 
-//    function probabilisticRandom(uint256 [] memory probabilities,uint256 seed) view public returns(uint256/**index*/){
-//
-//        uint256 totalRarityProbability=0;
-//        for (uint256 i=0;i<probabilities.length;++i){
-//            totalRarityProbability+=probabilities[i];
-//            if (i>0){
-//                probabilities[i]+=probabilities[i-1];
-//            }
-//        }
-//
-//        uint256 parityPoint=rand(totalRarityProbability,seed);
-//        for (uint256 i=0;i<probabilities.length;++i){
-//            if (parityPoint<probabilities[i]){
-//                return i;
-//            }
-//        }
-//
-//        return 0;
-//    }
-//
-//    function probabilisticRandom6(uint256 [6] memory probabilities,uint256 seed) view public returns(uint256/**index*/){
-//
-//        uint256 totalRarityProbability=0;
-//        for (uint256 i=0;i<6;++i){
-//            totalRarityProbability+=probabilities[i];
-//            if (i>0){
-//                probabilities[i]+=probabilities[i-1];
 //            }
 //        }
 //

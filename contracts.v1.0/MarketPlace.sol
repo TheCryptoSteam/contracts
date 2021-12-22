@@ -74,7 +74,6 @@ contract MarketPlace is AccessControlEnumerable
     }
 
     function cancelSell(address nftAddr,uint256 tokenId) public {
-        //require(supportNFTs.contains(nftAddr),"No support NFT");
         require(orderTokenIds[nftAddr].contains(tokenId),"MarketPlace: No such NFT");
         require(orderInfos[nftAddr][tokenId].owner==_msgSender(),"MarketPlace: Not your NFT");
         
@@ -87,7 +86,6 @@ contract MarketPlace is AccessControlEnumerable
     }
 
     function buy(address nftAddr, uint256 tokenId) external{
-        //require(supportNFTs.contains(nftAddr),"No support NFT");
         require(orderTokenIds[nftAddr].contains(tokenId),"MarketPlace: No such NFT");
 
         OrderInfo storage info=orderInfos[nftAddr][tokenId];

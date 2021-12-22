@@ -42,7 +42,6 @@ contract RubyToken is ERC20PresetMinterPauser
     }
 
     function mint(uint256 amount, bytes16 actionUUID,uint8 _v, bytes32 _r, bytes32 _s) public {
-        //require(hasRole(MINTER_ROLE, _msgSender()), "ERC20PresetMinterPauser: must have minter role to mint");
         require(actionUUIDs[actionUUID]==0,"AccountInfo: action has been executed");
 
         bytes32 messageHash =  keccak256(

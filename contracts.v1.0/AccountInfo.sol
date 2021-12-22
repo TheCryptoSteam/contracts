@@ -35,7 +35,6 @@ contract AccountInfo is AccessControl
         uint256 foodPoints;
 
         uint256 hatchingNests;
-        //uint256 stakingNests;
     }
 
     mapping(address=>Info) public infos;
@@ -67,7 +66,6 @@ contract AccountInfo is AccessControl
 
 
     function newAccount(address account,uint256 foodPoints_,uint256 hatchingNests_/* default 1 */,uint256 expiresAt, uint8 _v, bytes32 _r, bytes32 _s) public {
-        //require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "AccountInfo: must have admin role to newAccount");
         require(infos[account].account==address(0),"AccountInfo: account exists");
 
         if (!hasRole(DEFAULT_ADMIN_ROLE, _msgSender())){
@@ -88,7 +86,6 @@ contract AccountInfo is AccessControl
             require(isValidSignature,"AccountInfo: signature error");
         }
 
-        //infos[account]=Info(account,foodPoints_,hatchingNests_,STAKING_NESTS_SUPPLY);
         infos[account]=Info(account,foodPoints_,hatchingNests_);
     }
 
@@ -99,7 +96,6 @@ contract AccountInfo is AccessControl
     }
 
     function removeFoodPoints(address account,uint256 value, bytes16 actionUUID, uint8 _v, bytes32 _r, bytes32 _s) public{
-        //require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "AccountInfo: must have admin role to addFoodPoints");
         if (!hasRole(DEFAULT_ADMIN_ROLE, _msgSender())){
             require(actionUUIDs[actionUUID]==0,"AccountInfo: action has been executed");
             bytes32 messageHash =  keccak256(
@@ -121,7 +117,6 @@ contract AccountInfo is AccessControl
     }
 
     function addFoodPoints(address account,uint256 value, bytes16 actionUUID, uint8 _v, bytes32 _r, bytes32 _s) public{
-        //require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "AccountInfo: must have admin role to addFoodPoints");
         if (!hasRole(DEFAULT_ADMIN_ROLE, _msgSender())){
             require(actionUUIDs[actionUUID]==0,"AccountInfo: action has been executed");
             bytes32 messageHash =  keccak256(
@@ -147,7 +142,6 @@ contract AccountInfo is AccessControl
     }
 
     function openFoodChest(address account) public notContract {
-
         MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
         ChestToken chestToken=ChestToken(metaInfo.chestAddressArray(FOOD_CHEST));
         require(chestToken.balanceOf(_msgSender())>0,"AccountInfo: not enough Food Chest");
@@ -157,8 +151,6 @@ contract AccountInfo is AccessControl
         uint256 amount=metaInfo.scopeRand(beginValue,endValue);
 
         chestToken.burnFrom(_msgSender(), 1);
-        //ERC20Burnable(metaInfo.rubyAddress()).burnFrom(_msgSender(), hatchCostInfoFather.rubyCost+hatchCostInfoMonther.rubyCost);
-        //chestToken.burn(1);
         infos[account].foodPoints+=amount;
     }
 

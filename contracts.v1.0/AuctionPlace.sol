@@ -173,7 +173,6 @@ contract AuctionPlace is Context,AccessControlEnumerable{
 
 
         uint256 total=currAction.highestBid;
-        // uint256 busdBonusAmount=total*metaInfo.BUSDBonusPoolRate()/FRACTION_INT_BASE;
         uint256 busdOrgAmount=total*metaInfo.BUSDOrganizeRate()/FRACTION_INT_BASE;
         uint256 busdTeamAmount=total*metaInfo.BUSDTeamRate()/FRACTION_INT_BASE;
 
