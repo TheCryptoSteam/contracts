@@ -19,6 +19,7 @@ pragma solidity ^0.8.0;
 interface PlayerStatusQueryInterface
 {
     function stakingAmount(address stakedTokenAddr,address account) view external returns(uint256) ;
+    function rewardFoodsAmount(address stakedTokenAddr,address account)view external returns(uint256) ;
 }
 
 contract PlayerStatusQueryMock is PlayerStatusQueryInterface
@@ -27,6 +28,10 @@ contract PlayerStatusQueryMock is PlayerStatusQueryInterface
     }
 
     function stakingAmount(address /*stakedTokenAddr*/,address /*account*/) pure public override returns(uint256) {
+        return 0;
+    }
+
+    function rewardFoodsAmount(address /*stakedTokenAddr*/,address /*account*/)pure external override returns(uint256){
         return 0;
     }
 }

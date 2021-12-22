@@ -427,6 +427,36 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
         info[INIT_STAKING_RUBY_POWER]=rubyPower;
     }
 
+    function updateStateBatch(uint256[] calldata stateArray,uint256 expiresAt, uint8 _v, bytes32 _r, bytes32 _s) external {
+        //require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "DragonNFT: must have admin role");
+        require(stateArray.length % 7 == 0, "DragonNFT: wrong length of data");
+        if (!hasRole(DEFAULT_ADMIN_ROLE, _msgSender())){
+            require(expiresAt > block.timestamp, "time expired");
+            bytes32 messageHash =  keccak256(
+                abi.encodePacked(
+                    signPublicKey,
+                    stateArray,
+                    "updateState",
+                    address(this),
+                    expiresAt
+                )
+            );
+            
+            bool isValidSignature = MetaInfoDb(metaInfoDbAddr).isValidSignature(messageHash,signPublicKey,_v,_r,_s);
+            require(isValidSignature,"signature error");
+        }
+        //DragonInfo storage info=fields[tokenId];
+        for (uint256 i=0; i<stateArray.length; ) {
+            uint256 tokenId = stateArray[i++];
+            uint256 [INFO_FIELDS_COUNT] storage info=fields[tokenId];
+            info[LEVEL]=stateArray[i++];
+            info[LIFE_VALUE]=stateArray[i++];
+            info[ATTACK_VALUE]=stateArray[i++];
+            info[DEFENSE_VALUE]=stateArray[i++];
+            info[SPEED_VALUE]=stateArray[i++];
+            info[INIT_STAKING_RUBY_POWER]=stateArray[i++];
+        }
+    }
     function isCloseRelativeWith(uint256 tokenId1,uint256 tokenId2) view public returns(bool){
         HeredityInfo memory hinfo=getHeredityInfo(tokenId1);
         uint256 [7] memory ids=[
