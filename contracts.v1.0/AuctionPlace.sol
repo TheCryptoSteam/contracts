@@ -20,6 +20,7 @@ import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 import "./MetaInfoDb.sol";
 
 contract AuctionPlace is Context,AccessControlEnumerable{
@@ -40,9 +41,13 @@ contract AuctionPlace is Context,AccessControlEnumerable{
         bool ended;
     }
 
+    using Counters for Counters.Counter;
+    Counters.Counter public lastEventSeqNum;
+
     // Events that will be emitted on changes.
-    event HighestBidIncreased(uint256 tokenId,address bidder, uint amount);
-    event AuctionEnded(uint256 tokenId,address winner, uint amount);
+    event AuctionStarted(uint256 tokenId,uint biddingTime, address beneficiary, uint256 minPrice,uint256 indexed eventSeqNum);
+    event HighestBidIncreased(uint256 tokenId,address bidder, uint amount,uint256 indexed eventSeqNum);
+    event AuctionEnded(uint256 tokenId,address winner, uint amount,uint256 indexed eventSeqNum);
 
     mapping(uint256/*tokenId*/=>Auction[]) public auctions;
 
@@ -100,6 +105,9 @@ contract AuctionPlace is Context,AccessControlEnumerable{
         auctions[tokenId].push(Auction(tokenId, beneficiary_,block.timestamp + biddingTime_,address(0),minPrice,false));
 
         ERC721(nftAddr).transferFrom(beneficiary_,address(this),tokenId);
+
+        lastEventSeqNum.increment();
+        emit AuctionStarted(tokenId,biddingTime_,beneficiary_,minPrice,lastEventSeqNum.current());
     }
 
     function bid(uint256 tokenId,uint256 price) public {
@@ -122,7 +130,8 @@ contract AuctionPlace is Context,AccessControlEnumerable{
 
         ERC20(moneyTokenAddr).transferFrom(_msgSender(),address(this),price);
 
-        emit HighestBidIncreased(tokenId,_msgSender(), price);
+        lastEventSeqNum.increment();
+        emit HighestBidIncreased(tokenId,_msgSender(), price,lastEventSeqNum.current());
     }
 
     function withdraw(uint256 tokenId) public {
@@ -167,7 +176,6 @@ contract AuctionPlace is Context,AccessControlEnumerable{
 
         // Effects
         currAction.ended = true;
-        emit AuctionEnded(tokenId,currAction.highestBidder, currAction.highestBid);
 
         // Interaction
 
@@ -181,5 +189,7 @@ contract AuctionPlace is Context,AccessControlEnumerable{
         ERC20(moneyTokenAddr).transfer(metaInfo.BUSDTeamAddress(),busdTeamAmount);
         ERC721(nftAddr).transferFrom(address(this),currAction.highestBidder,tokenId);
 
+        lastEventSeqNum.increment();
+        emit AuctionEnded(tokenId,currAction.highestBidder, currAction.highestBid,lastEventSeqNum.current());
     }
 }
