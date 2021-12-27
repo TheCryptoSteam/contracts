@@ -19,6 +19,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 import "./MetaInfoDb.sol";
 import "./ChestToken.sol";
 import "./PlayerStatusQueryInterface.sol";
@@ -29,6 +30,9 @@ contract AccountInfo is AccessControl
     using Address for address;
     address public metaInfoDbAddr;
     address public signPublicKey ;
+
+    using Counters for Counters.Counter;
+    Counters.Counter public lastEventSeqNum;
 
     struct Info{
         address account;
@@ -44,16 +48,16 @@ contract AccountInfo is AccessControl
 
     mapping(address=>EnumerableSet.UintSet) hatchingNestsSet ;
 
-    function _isContract(address addr) internal view returns (bool) {
-        uint256 size;
-        assembly {
-            size := extcodesize(addr)
-        }
-        return size > 0;
-    }
+    event AccountCreated(address indexed account,uint256 foodPoint,uint256 hatchingNests,uint256 indexed eventSeqNum);
+    event AccountFoodsChanged(address account,uint256 value,uint256 indexed eventSeqNum);
+    event AccountHatchingNestsCountChanged(address account,uint256 count,uint256 indexed eventSeqNum);
+    event AccountHatchingNestsUsed(address account,uint256 eggTokenId,uint256 indexed eventSeqNum);
+    event AccountHatchingNestsFree(address account,uint256 eggTokenId,uint256 indexed eventSeqNum);
+
+    event AccountExtInfoChanged(address account,string name,string value,uint256 eventSeqNum);
 
     modifier notContract() {
-        require((!_isContract(msg.sender)) && (msg.sender == tx.origin), "contract not allowed");
+        require(!msg.sender.isContract() && (msg.sender == tx.origin), "contract not allowed");
         _;
     }
 
@@ -87,6 +91,9 @@ contract AccountInfo is AccessControl
         }
 
         infos[account]=Info(account,foodPoints_,hatchingNests_);
+
+        lastEventSeqNum.increment();
+        emit AccountCreated(account,foodPoints_,hatchingNests_,lastEventSeqNum.current());
     }
 
     function getRewardHatchingNestsByStaking(address account) view  public returns(uint256){
@@ -114,6 +121,8 @@ contract AccountInfo is AccessControl
             actionUUIDs[actionUUID]=block.timestamp;
         }
         infos[account].foodPoints-=value;
+        lastEventSeqNum.increment();
+        emit AccountFoodsChanged(account,infos[account].foodPoints,lastEventSeqNum.current());
     }
 
     function addFoodPoints(address account,uint256 value, bytes16 actionUUID, uint8 _v, bytes32 _r, bytes32 _s) public{
@@ -135,6 +144,8 @@ contract AccountInfo is AccessControl
             actionUUIDs[actionUUID]=block.timestamp;
         }
         infos[account].foodPoints+=value;
+        lastEventSeqNum.increment();
+        emit AccountFoodsChanged(account,infos[account].foodPoints,lastEventSeqNum.current());
     }
 
     function foodPoints(address account) view public returns(uint256) {
@@ -152,6 +163,8 @@ contract AccountInfo is AccessControl
 
         chestToken.burnFrom(_msgSender(), 1);
         infos[account].foodPoints+=amount;
+        lastEventSeqNum.increment();
+        emit AccountFoodsChanged(account,infos[account].foodPoints,lastEventSeqNum.current());
     }
 
     function hatchingNests(address account) view public returns(uint256 [] memory) {
@@ -172,13 +185,19 @@ contract AccountInfo is AccessControl
     function putInHatchingNest(address account, uint256 eggTokenId) public returns(bool){
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "AccountInfo: must have admin role to putInHatchingNest");
         require(hatchingNestsCount(account)>hatchingNestsSet[account].length(),"AccountInfo: no enought HatchingNests");
-        return hatchingNestsSet[account].add(eggTokenId);
+        bool ret = hatchingNestsSet[account].add(eggTokenId);
+        lastEventSeqNum.increment();
+        emit AccountHatchingNestsUsed(account,eggTokenId,lastEventSeqNum.current());
+        return ret;
     }
 
     //EggNFT contract call it 
     function takeOutHatchingNest(address account, uint256 eggTokenId) public returns(bool){
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "AccountInfo: must have admin role to takeOutHatchingNest");
-        return hatchingNestsSet[account].remove(eggTokenId);
+        bool ret= hatchingNestsSet[account].remove(eggTokenId);
+        lastEventSeqNum.increment();
+        emit AccountHatchingNestsFree(account,eggTokenId,lastEventSeqNum.current());
+        return ret;
     }
 
     //manager interfaces
@@ -190,6 +209,8 @@ contract AccountInfo is AccessControl
     function setExtInfo(address account,string memory name,string memory value) public{
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "AccountInfo: must have admin role to setExtInfo");
         extInfos[account][name]=value;
+        lastEventSeqNum.increment();
+        emit AccountExtInfoChanged(account,name,value,lastEventSeqNum.current());
     }
 
     function resetAddress(address metaInfoDbAddr_) public {
@@ -205,6 +226,9 @@ contract AccountInfo is AccessControl
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "AccountInfo: must have admin role to addHatchingNests");
         require(infos[account].hatchingNests+nestsCount<=HATCHING_NESTS_SUPPLY,"AccountInfo: hatchingNests must less than HATCHING_NESTS_SUPPLY");
         infos[account].hatchingNests+=nestsCount;
+
+        lastEventSeqNum.increment();
+        emit AccountHatchingNestsCountChanged(account,infos[account].hatchingNests,lastEventSeqNum.current());
     }
 
 }
