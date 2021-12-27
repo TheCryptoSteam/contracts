@@ -45,6 +45,11 @@ contract VaultOwned is Ownable {
 contract CstERC20Token is ERC20Permit, VaultOwned {
     uint256 private immutable _cap;
 
+    using Counters for Counters.Counter;
+    Counters.Counter public lastEventSeqNum;
+
+    event TransferEx(address indexed from, address indexed to, uint256 value,uint256 indexed eventSeqNum);
+
     constructor()
         ERC20Permit("CST Token")
         ERC20("CST Token", "CST")
@@ -86,5 +91,14 @@ contract CstERC20Token is ERC20Permit, VaultOwned {
 
         _approve(account_, msg.sender, decreasedAllowance_);
         _burn(account_, amount_);
+    }
+
+    function _afterTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual override    {
+        lastEventSeqNum.increment();
+        emit TransferEx(from,to,amount,lastEventSeqNum.current());
     }
 }

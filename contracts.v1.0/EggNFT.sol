@@ -22,6 +22,7 @@ import "./PresetMinterPauserAutoIdNFT.sol";
 import "./DragonNFT.sol";
 import "./MetaInfoDb.sol";
 import "./AccountInfo.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 
 struct EggInfo {
     uint256 id;
@@ -36,13 +37,17 @@ contract EggNFT is PresetMinterPauserAutoIdNFT
     using Address for address;
     address public metaInfoDbAddr;
 
+    using Counters for Counters.Counter;
+
     mapping(uint256=>EggInfo) public infos;
     mapping(uint256=>HeredityInfo) public heredityInfos;
 
     uint256 private _currentInfoId;
 
-    event NewEggMinted( EggInfo info, HeredityInfo heredityInfo);
-    event EggBurned( uint256 id);
+    event NewEggMinted( EggInfo info, HeredityInfo heredityInfo,uint256 indexed eventSeqNum);
+    event EggBurned( uint256 indexed id,uint256 indexed eventSeqNum);
+    event EggHatchingStarted(uint256 tokenId,uint256 indexed eventSeqNum);
+    event EggHatchingStopped(uint256 tokenId,uint256 indexed eventSeqNum);
 
 
     constructor(address metaInfoDbAddr_,string memory baseTokenURI)
@@ -82,6 +87,9 @@ contract EggNFT is PresetMinterPauserAutoIdNFT
 
         AccountInfo accountInfo=AccountInfo(MetaInfoDb(metaInfoDbAddr).accountInfoAddr());
         accountInfo.putInHatchingNest(_msgSender(), tokenId);
+
+        lastEventSeqNum.increment();
+        emit EggHatchingStarted(tokenId,lastEventSeqNum.current());
     }
 
     function stopHatching(uint256 tokenId) public{
@@ -95,6 +103,9 @@ contract EggNFT is PresetMinterPauserAutoIdNFT
 
         AccountInfo accountInfo=AccountInfo(MetaInfoDb(metaInfoDbAddr).accountInfoAddr());
         accountInfo.takeOutHatchingNest(_msgSender(), tokenId);
+
+        lastEventSeqNum.increment();
+        emit EggHatchingStopped(tokenId,lastEventSeqNum.current());
     }
 
 
@@ -113,7 +124,8 @@ contract EggNFT is PresetMinterPauserAutoIdNFT
         DragonNFT dragonNFT=DragonNFT(metaInfo.dragonNFTAddr());
         dragonNFT.mint(CLASS_NONE,info.fatherFamily.dragonId,info.motherFamily.dragonId,_msgSender());
 
-        emit EggBurned(tokenId);
+        lastEventSeqNum.increment();
+        emit EggBurned(tokenId,lastEventSeqNum.current());
     }
 
 
@@ -158,7 +170,8 @@ contract EggNFT is PresetMinterPauserAutoIdNFT
         infos[_currentInfoId]=EggInfo(_currentInfoId,block.timestamp,0,metaInfo.defaultHatchingDuration());
         heredityInfos[_currentInfoId]=dragonNFT.genHeredityInfo(_currentInfoId,fatherTokenId,motherTokenId);
 
-        emit NewEggMinted(infos[_currentInfoId],heredityInfos[_currentInfoId]);
+        lastEventSeqNum.increment();
+        emit NewEggMinted(infos[_currentInfoId],heredityInfos[_currentInfoId],lastEventSeqNum.current());
     }
 
     function _beforeTokenTransfer(address from,address to,uint256 tokenId) internal virtual override{

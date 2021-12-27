@@ -86,6 +86,7 @@ uint256 constant CLASS_OLYMPUS = 0x04;
 
 
 uint256 constant DEFAULT_HATCH_TIMES = 5;
+
 uint256 constant HATCH_MAX_TIMES =7  ;
 
 uint256 constant DEFAULT_HATCHING_DURATION = 5 days;
@@ -632,6 +633,7 @@ contract MetaInfoDb is AccessControlEnumerable
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setSkillsLibProb");
         skillsLibProb[index]=probs;
     }
+
 
 
     function rand3() public view returns(uint256) {

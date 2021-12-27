@@ -46,6 +46,7 @@ contract PresetMinterPauserAutoIdNFT is
     ERC721Pausable
 {
     using Counters for Counters.Counter;
+    Counters.Counter public lastEventSeqNum;
 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
@@ -53,6 +54,8 @@ contract PresetMinterPauserAutoIdNFT is
     Counters.Counter private _tokenIdTracker;
 
     string private _baseTokenURI;
+
+    event TransferEx(address indexed from, address indexed to, uint256 tokenId,uint256 indexed seqNum);
 
     function _isContract(address addr) internal view returns (bool) {
         uint256 size;
@@ -159,5 +162,32 @@ contract PresetMinterPauserAutoIdNFT is
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
+    }
+
+    function _transfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal virtual override {
+        super._transfer(from,to,tokenId);
+
+        lastEventSeqNum.increment();
+        emit TransferEx(from, to, tokenId,lastEventSeqNum.current());
+    }
+
+    function _mint(address to, uint256 tokenId) internal virtual override{
+        super._mint(to,tokenId);
+
+        lastEventSeqNum.increment();
+        emit TransferEx(address(0), to, tokenId,lastEventSeqNum.current());
+    }
+
+    function _burn(uint256 tokenId) internal virtual override{
+        lastEventSeqNum.increment();
+        address owner = ERC721.ownerOf(tokenId);
+
+        super._burn(tokenId);
+
+        emit TransferEx(owner, address(0), tokenId,lastEventSeqNum.current());
     }
 }

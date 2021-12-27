@@ -20,7 +20,7 @@ import "./PresetMinterPauserAutoIdNFT.sol";
 import "./MetaInfoDb.sol";
 import "./ChestToken.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-
+import "@openzeppelin/contracts/utils/Counters.sol";
 
 uint256 constant ID=0;
 uint256 constant FATHER_ID=1;
@@ -53,21 +53,25 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
     using Address for address;
     using EnumerableSet for EnumerableSet.UintSet;
 
+    using Counters for Counters.Counter;
+
     address public metaInfoDbAddr;
     address public signPublicKey;
 
     mapping(uint256/** tokenId */=>uint256 [INFO_FIELDS_COUNT])  public fields;
     mapping(uint256/** tokenId */=>uint256 [INFO_FIELDSEX_COUNT])  public fieldsEx;
 
-    mapping(uint256/**tokenId*/=>address) public lockedTokens;
     mapping(address=>EnumerableSet.UintSet ) internal _lockedTokensOf;
 
     mapping(uint256/**rarity id */=>uint256/*total*/) public balanceInRarity;
 
     uint256 private _currentInfoId;
 
-    event NewDragonMinted(uint256 [INFO_FIELDS_COUNT] info, uint256 [INFO_FIELDSEX_COUNT] infoEx);
-    event DragonBurned(uint256 id);
+    event NewDragonMinted(uint256 [INFO_FIELDS_COUNT] info, uint256 [INFO_FIELDSEX_COUNT] infoEx,uint256 indexed eventSeqNum);
+    event DragonBurned(uint256 indexed id,uint256 indexed eventSeqNum);
+    event DragonHatchTimesChanged(uint256 tokenId,uint256 times,uint256 indexed eventSeqNum);
+    event DragonStarChanged(uint256 tokenId,uint256 star,uint256 indexed eventSeqNum);
+    event DragonStateChanged(uint256 tokenId,uint256 level, uint256 life,uint256 attack,uint256 defense,uint256 speed,uint256 rubyPower,uint256 indexed eventSeqNum);
 
     function allFields(uint256 tokenId) view public returns(uint256 [INFO_FIELDS_COUNT] memory, uint256 [INFO_FIELDSEX_COUNT] memory){
         return (fields[tokenId], fieldsEx[tokenId]);
@@ -82,6 +86,7 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
         _setupRole(MINTER_ROLE, eggNFTAddr);
         _setupRole(MINTER_ROLE, address(this));
         signPublicKey = signPublicKey_;
+
     }
 
 
@@ -174,7 +179,8 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
             infoEx[SKILL_ID]=(rnd / 1e5) % skillsCount + 1;
         }
 
-        emit NewDragonMinted(fields[_currentInfoId],fieldsEx[_currentInfoId]);
+        lastEventSeqNum.increment();
+        emit NewDragonMinted(fields[_currentInfoId],fieldsEx[_currentInfoId],lastEventSeqNum.current());
     }
 
     function mintByChest(address to,uint256 chestKind) public notContract {
@@ -322,7 +328,8 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
             infoEx[SKILL_ID]=genSkillsFromHeredityR(fatherTokenId,motherTokenId,selDragonId,rnd/1e6);
         }
 
-        emit NewDragonMinted(fields[_currentInfoId],fieldsEx[_currentInfoId]);
+        lastEventSeqNum.increment();
+        emit NewDragonMinted(fields[_currentInfoId],fieldsEx[_currentInfoId],lastEventSeqNum.current());
 
         _currentInfoId=0;
     }
@@ -339,6 +346,9 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
     function subHatchTimes(uint256 tokenId) public {
         require(hasRole(MINTER_ROLE, _msgSender()), "DragonNFT: must have minter role to subHatchTimes");
         fields[tokenId][HATCH_TIMES]-=1;
+
+        lastEventSeqNum.increment();
+        emit DragonHatchTimesChanged(tokenId,fields[tokenId][HATCH_TIMES],lastEventSeqNum.current());
     }
 
     function hatchCostInfo(uint256 tokenId) view public returns(HatchCostInfo memory){
@@ -351,7 +361,6 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
 
 
     function updateStar(uint256 dragonTokenId,uint256 [] calldata foodDragonTokenIds/** dragonNFT as food */) external {
-        require(lockedTokens[dragonTokenId]==address(0),"DragonNFT: Locked dragon can not be updateStar");
         MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
 
         uint256 [INFO_FIELDS_COUNT] storage info=fields[dragonTokenId];
@@ -368,6 +377,9 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
             }
         }
         fields[dragonTokenId][STAR] += 1;
+
+        lastEventSeqNum.increment();
+        emit DragonStarChanged(dragonTokenId,fields[dragonTokenId][STAR],lastEventSeqNum.current());
     }
 
 
@@ -376,7 +388,6 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
     }
 
     function _burn(uint256 tokenId) internal override {
-        require(lockedTokens[tokenId]==address(0),"DragonNFT: Locked dragon can not be burn");
         super._burn(tokenId);
         uint256  rarity = fields[tokenId][RARITY];
         if (balanceInRarity[rarity]>1){
@@ -384,14 +395,13 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
         }
         delete fields[tokenId];
         delete fieldsEx[tokenId];
-        emit DragonBurned(tokenId);
+
+        lastEventSeqNum.increment();
+        emit DragonBurned(tokenId,lastEventSeqNum.current());
         //delete infoExs[tokenId];
         //delete heredityInfos[tokenId];
     }
 
-    function lockedTokensOf(address account) view public returns(uint256[] memory){
-        return  _lockedTokensOf[account].values();
-    }
 
 
     function updateState(uint256 tokenId,uint256 level, uint256 life,uint256 attack,uint256 defense,uint256 speed,uint256 rubyPower,uint256 expiresAt, uint8 _v, bytes32 _r, bytes32 _s) public {
@@ -422,6 +432,9 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
         info[DEFENSE_VALUE]=defense;
         info[SPEED_VALUE]=speed;
         info[INIT_STAKING_RUBY_POWER]=rubyPower;
+
+        lastEventSeqNum.increment();
+        emit  DragonStateChanged(tokenId,level,life,attack,defense,speed,rubyPower,lastEventSeqNum.current());
     }
 
     function updateStateBatch(uint256[] calldata stateArray,uint256 expiresAt, uint8 _v, bytes32 _r, bytes32 _s) external {
@@ -452,6 +465,9 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
             info[DEFENSE_VALUE]=stateArray[i++];
             info[SPEED_VALUE]=stateArray[i++];
             info[INIT_STAKING_RUBY_POWER]=stateArray[i++];
+
+            lastEventSeqNum.increment();
+            emit  DragonStateChanged(tokenId,info[LEVEL],info[LIFE_VALUE],info[ATTACK_VALUE],info[DEFENSE_VALUE],info[SPEED_VALUE],info[INIT_STAKING_RUBY_POWER],lastEventSeqNum.current());
         }
     }
     function isCloseRelativeWith(uint256 tokenId1,uint256 tokenId2) view public returns(bool){

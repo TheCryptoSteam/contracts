@@ -22,6 +22,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 import "./MetaInfoDb.sol";
 
 contract MarketPlace is AccessControlEnumerable
@@ -49,9 +50,13 @@ contract MarketPlace is AccessControlEnumerable
     mapping(address/**nft address */=>mapping(address/** account address */=>EnumerableSet.UintSet)) userOrderTokenIds;
     mapping(address/**nft address */=>mapping(uint256/** tokenId */=>OrderInfo))  public orderInfos;
 
-    event NewSellOrder(address nftAddr, uint256 tokenId, address priceToken, uint256 orderPrice, uint256 validPeriod, uint256 createTimestamp, address owner);
-    event CancelSellOrder(address nftAddr, uint256 tokenId,address owner);
-    event NewTrade(address nftAddr, uint256 tokenId);
+
+    using Counters for Counters.Counter;
+    Counters.Counter public lastEventSeqNum;
+
+    event NewSellOrder(address nftAddr, uint256 tokenId, address priceToken, uint256 orderPrice, uint256 validPeriod, uint256 createTimestamp, address owner,uint256 indexed eventSeqNum);
+    event CancelSellOrder(address nftAddr, uint256 tokenId,address owner,uint256 indexed eventSeqNum);
+    event NewTrade(address nftAddr, uint256 tokenId,uint256 indexed eventSeqNum);
 
     constructor(address metaInfoDbAddr_) {
         metaInfoDbAddr=metaInfoDbAddr_;
@@ -70,7 +75,8 @@ contract MarketPlace is AccessControlEnumerable
 
         IERC721(nftAddr).transferFrom(_msgSender(), address(this), tokenId);
 
-        emit NewSellOrder(nftAddr,tokenId,priceToken,price,validPeriod,block.timestamp,_msgSender());
+        lastEventSeqNum.increment();
+        emit NewSellOrder(nftAddr,tokenId,priceToken,price,validPeriod,block.timestamp,_msgSender(),lastEventSeqNum.current());
     }
 
     function cancelSell(address nftAddr,uint256 tokenId) public {
@@ -82,7 +88,9 @@ contract MarketPlace is AccessControlEnumerable
         delete orderInfos[nftAddr][tokenId];
     
         IERC721(nftAddr).transferFrom(address(this), _msgSender(), tokenId);
-        emit CancelSellOrder(nftAddr,tokenId,_msgSender());
+
+        lastEventSeqNum.increment();
+        emit CancelSellOrder(nftAddr,tokenId,_msgSender(),lastEventSeqNum.current());
     }
 
     function buy(address nftAddr, uint256 tokenId) external{
@@ -117,7 +125,8 @@ contract MarketPlace is AccessControlEnumerable
         IERC20(priceToken).transferFrom(_msgSender(), owner, orderPrice-fees);
         IERC721(nftAddr).transferFrom(address(this), _msgSender(), tokenId);
 
-        emit NewTrade(nftAddr,tokenId);
+        lastEventSeqNum.increment();
+        emit NewTrade(nftAddr,tokenId,lastEventSeqNum.current());
     }
 
     function addNFTs(address [] calldata nftAddrArray) external  {

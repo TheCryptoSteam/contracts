@@ -15,11 +15,11 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import "./ERC20PresetMinterPauserEx.sol";
 import "./MetaInfoDb.sol";
 
 
-contract RubyToken is ERC20PresetMinterPauser
+contract RubyToken is ERC20PresetMinterPauserEx
 {
     address public signPublicKey ;
     address public metaInfoDbAddr;
@@ -27,7 +27,9 @@ contract RubyToken is ERC20PresetMinterPauser
     mapping(bytes16=>uint256) public actionUUIDs;
 
 
-    constructor(address signPublicKey_) ERC20PresetMinterPauser("DeDragon Ruby Token", "RUBY") {
+    constructor(address signPublicKey_)
+    ERC20PresetMinterPauserEx("DeDragon Ruby Token", "RUBY")
+    {
         signPublicKey=signPublicKey_;
     }
 

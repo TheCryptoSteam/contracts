@@ -15,15 +15,15 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import "./ERC20PresetMinterPauserEx.sol";
 
 
-contract ChestToken is ERC20PresetMinterPauser{
-
+contract ChestToken is ERC20PresetMinterPauserEx
+{
     uint256 immutable public kind;
 
     constructor(uint256 kind_,string memory name, string memory symbol)
-    ERC20PresetMinterPauser(name, symbol)
+    ERC20PresetMinterPauserEx(name, symbol)
     {
         kind=kind_;
     }
