@@ -58,6 +58,8 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
     address public metaInfoDbAddr;
     address public signPublicKey;
 
+    mapping(bytes16=>uint256) public actionUUIDs;
+
     mapping(uint256/** tokenId */=>uint256 [INFO_FIELDS_COUNT])  public fields;
     mapping(uint256/** tokenId */=>uint256 [INFO_FIELDSEX_COUNT])  public fieldsEx;
 
@@ -404,9 +406,10 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
 
 
 
-    function updateState(uint256 tokenId,uint256 level, uint256 life,uint256 attack,uint256 defense,uint256 speed,uint256 rubyPower,uint256 expiresAt, uint8 _v, bytes32 _r, bytes32 _s) public {
+    function updateState(uint256 tokenId,uint256 level, uint256 life,uint256 attack,uint256 defense,uint256 speed,uint256 rubyPower,uint256 expiresAt, bytes16 actionUUID, uint8 _v, bytes32 _r, bytes32 _s) public {
         //require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "DragonNFT: must have admin role");
         if (!hasRole(DEFAULT_ADMIN_ROLE, _msgSender())){
+            require(actionUUIDs[actionUUID]==0,"AccountInfo: action has been executed");
             require(expiresAt > block.timestamp, "time expired");
             bytes32 messageHash =  keccak256(
                 abi.encodePacked(
@@ -416,6 +419,7 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
                     level,
                     life, attack, defense, speed,
                     rubyPower,
+                    actionUUID,
                     address(this),
                     expiresAt
                 )
@@ -437,15 +441,17 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
         emit  DragonStateChanged(tokenId,level,life,attack,defense,speed,rubyPower,lastEventSeqNum.current());
     }
 
-    function updateStateBatch(uint256[] calldata stateArray,uint256 expiresAt, uint8 _v, bytes32 _r, bytes32 _s) external {
+    function updateStateBatch(uint256[] calldata stateArray,uint256 expiresAt, bytes16 actionUUID, uint8 _v, bytes32 _r, bytes32 _s) external {
         //require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "DragonNFT: must have admin role");
         require(stateArray.length % 7 == 0, "DragonNFT: wrong length of data");
         if (!hasRole(DEFAULT_ADMIN_ROLE, _msgSender())){
+            require(actionUUIDs[actionUUID]==0,"AccountInfo: action has been executed");
             require(expiresAt > block.timestamp, "time expired");
             bytes32 messageHash =  keccak256(
                 abi.encodePacked(
                     signPublicKey,
                     stateArray,
+                    actionUUID,
                     "updateState",
                     address(this),
                     expiresAt

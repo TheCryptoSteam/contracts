@@ -43,18 +43,21 @@ contract EggNFT is PresetMinterPauserAutoIdNFT
     mapping(uint256=>HeredityInfo) public heredityInfos;
 
     uint256 private _currentInfoId;
+    
+    uint256 [5] public hatchingDurationArray;
 
     event NewEggMinted( EggInfo info, HeredityInfo heredityInfo,uint256 indexed eventSeqNum);
     event EggBurned( uint256 indexed id,uint256 indexed eventSeqNum);
     event EggHatchingStarted(uint256 tokenId,uint256 indexed eventSeqNum);
     event EggHatchingStopped(uint256 tokenId,uint256 indexed eventSeqNum);
 
-
     constructor(address metaInfoDbAddr_,string memory baseTokenURI)
     PresetMinterPauserAutoIdNFT("DeDragon Egg NFT","DDEN",baseTokenURI)
     {
         metaInfoDbAddr = metaInfoDbAddr_;
         _setupRole(MINTER_ROLE, address(this));
+        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        hatchingDurationArray=[50000, 100000, 150000, 200000, 300000];
     }
 
 
@@ -167,11 +170,28 @@ contract EggNFT is PresetMinterPauserAutoIdNFT
         _currentInfoId=0;
         PresetMinterPauserAutoIdNFT(this).mint(to);
         require(_currentInfoId!=0,"EggNFT: mint id error");
-        infos[_currentInfoId]=EggInfo(_currentInfoId,block.timestamp,0,metaInfo.defaultHatchingDuration());
+        uint256 duration = metaInfo.defaultHatchingDuration();
+        uint256 dragonNum = dragonNFT.totalSupply();
+        for (uint256 i=0; i<hatchingDurationArray.length; i++) {
+            if (dragonNum < hatchingDurationArray[hatchingDurationArray.length-1-i] && duration > 1 days) {
+                duration -= 1 days;
+            }
+        }
+
+        infos[_currentInfoId]=EggInfo(_currentInfoId,block.timestamp,0,duration);
         heredityInfos[_currentInfoId]=dragonNFT.genHeredityInfo(_currentInfoId,fatherTokenId,motherTokenId);
 
         lastEventSeqNum.increment();
         emit NewEggMinted(infos[_currentInfoId],heredityInfos[_currentInfoId],lastEventSeqNum.current());
+    }
+
+    function getHatchingDurationArray() view public returns(uint256 [5] memory) {
+        return hatchingDurationArray;
+    }
+
+    function setHatchingDurationArray(uint256 [5] memory hatchingDurationArray_) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "EggNFT: must have admin role to setHatchingDurationArray");
+        hatchingDurationArray=hatchingDurationArray_;
     }
 
     function _beforeTokenTransfer(address from,address to,uint256 tokenId) internal virtual override{
