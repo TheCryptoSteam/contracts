@@ -70,8 +70,8 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
     uint256 private _currentInfoId;
 
     event NewDragonMinted(uint256 [INFO_FIELDS_COUNT] info, uint256 [INFO_FIELDSEX_COUNT] infoEx,uint256 indexed eventSeqNum);
-    event DragonBurned(uint256 indexed id,uint256 indexed eventSeqNum);
-    event DragonHatchTimesChanged(uint256 tokenId,uint256 times,uint256 indexed eventSeqNum);
+    event DragonBurned(uint256 tokenId,uint256 indexed eventSeqNum);
+    event DragonHatchTimesChanged(uint256 tokenId,uint256 hatchTimes,uint256 indexed eventSeqNum);
     event DragonStarChanged(uint256 tokenId,uint256 star,uint256 indexed eventSeqNum);
     event DragonStateChanged(uint256 tokenId,uint256 level, uint256 life,uint256 attack,uint256 defense,uint256 speed,uint256 rubyPower,uint256 indexed eventSeqNum);
 

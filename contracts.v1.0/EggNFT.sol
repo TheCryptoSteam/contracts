@@ -47,7 +47,7 @@ contract EggNFT is PresetMinterPauserAutoIdNFT
     uint256 [5] public hatchingDurationArray;
 
     event NewEggMinted( EggInfo info, HeredityInfo heredityInfo,uint256 indexed eventSeqNum);
-    event EggBurned( uint256 indexed id,uint256 indexed eventSeqNum);
+    event EggBurned( uint256 tokenId,uint256 indexed eventSeqNum);
     event EggHatchingStarted(uint256 tokenId,uint256 indexed eventSeqNum);
     event EggHatchingStopped(uint256 tokenId,uint256 indexed eventSeqNum);
 

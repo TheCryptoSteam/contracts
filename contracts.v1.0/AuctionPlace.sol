@@ -45,9 +45,9 @@ contract AuctionPlace is Context,AccessControlEnumerable{
     Counters.Counter public lastEventSeqNum;
 
     // Events that will be emitted on changes.
-    event AuctionStarted(uint256 tokenId,uint biddingTime, address beneficiary, uint256 minPrice,uint256 indexed eventSeqNum);
-    event HighestBidIncreased(uint256 tokenId,address bidder, uint amount,uint256 indexed eventSeqNum);
-    event AuctionEnded(uint256 tokenId,address winner, uint amount,uint256 indexed eventSeqNum);
+    event AuctionStarted(uint256 tokenId,uint auctionEndTime, address beneficiary, uint256 highestBid,uint256 indexed eventSeqNum);
+    event HighestBidIncreased(uint256 tokenId,address highestBidder, uint highestBid,uint256 indexed eventSeqNum);
+    event AuctionEnded(uint256 tokenId,address highestBidder, uint highestBid,uint256 indexed eventSeqNum);
 
     mapping(uint256/*tokenId*/=>Auction[]) public auctions;
 
@@ -107,7 +107,7 @@ contract AuctionPlace is Context,AccessControlEnumerable{
         ERC721(nftAddr).transferFrom(beneficiary_,address(this),tokenId);
 
         lastEventSeqNum.increment();
-        emit AuctionStarted(tokenId,biddingTime_,beneficiary_,minPrice,lastEventSeqNum.current());
+        emit AuctionStarted(tokenId,block.timestamp +biddingTime_,beneficiary_,minPrice,lastEventSeqNum.current());
     }
 
     function bid(uint256 tokenId,uint256 price) public {
@@ -131,7 +131,7 @@ contract AuctionPlace is Context,AccessControlEnumerable{
         ERC20(moneyTokenAddr).transferFrom(_msgSender(),address(this),price);
 
         lastEventSeqNum.increment();
-        emit HighestBidIncreased(tokenId,_msgSender(), price,lastEventSeqNum.current());
+        emit HighestBidIncreased(tokenId,currAction.highestBidder, currAction.highestBid,lastEventSeqNum.current());
     }
 
     function withdraw(uint256 tokenId) public {

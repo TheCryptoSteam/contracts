@@ -49,8 +49,8 @@ contract AccountInfo is AccessControl
     mapping(address=>EnumerableSet.UintSet) hatchingNestsSet ;
 
     event AccountCreated(address indexed account,uint256 foodPoint,uint256 hatchingNests,uint256 indexed eventSeqNum);
-    event AccountFoodsChanged(address account,uint256 value,uint256 indexed eventSeqNum);
-    event AccountHatchingNestsCountChanged(address account,uint256 count,uint256 indexed eventSeqNum);
+    event AccountFoodsChanged(address account,uint256 foodPoint,uint256 indexed eventSeqNum);
+    event AccountHatchingNestsCountChanged(address account,uint256 hatchingNests,uint256 indexed eventSeqNum);
     event AccountHatchingNestsUsed(address account,uint256 eggTokenId,uint256 indexed eventSeqNum);
     event AccountHatchingNestsFree(address account,uint256 eggTokenId,uint256 indexed eventSeqNum);
 

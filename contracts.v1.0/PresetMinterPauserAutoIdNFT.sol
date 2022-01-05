@@ -55,7 +55,7 @@ contract PresetMinterPauserAutoIdNFT is
 
     string private _baseTokenURI;
 
-    event TransferEx(address indexed from, address indexed to, uint256 tokenId,uint256 indexed seqNum);
+    event TransferEx(address indexed from, address indexed to, uint256 tokenId,uint256 indexed eventSeqNum);
 
     function _isContract(address addr) internal view returns (bool) {
         uint256 size;
