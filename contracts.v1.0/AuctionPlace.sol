@@ -128,7 +128,9 @@ contract AuctionPlace is Context,AccessControlEnumerable{
         currAction.highestBidder = _msgSender();
         currAction.highestBid = price;
 
+        uint256 bal0 = ERC20(moneyTokenAddr).balanceOf(address(this));
         ERC20(moneyTokenAddr).transferFrom(_msgSender(),address(this),price);
+        require(ERC20(moneyTokenAddr).balanceOf(address(this)) == bal0 + price, "AuctionPlace: received money should be equal to price");
 
         lastEventSeqNum.increment();
         emit HighestBidIncreased(tokenId,currAction.highestBidder, currAction.highestBid,lastEventSeqNum.current());
@@ -181,12 +183,12 @@ contract AuctionPlace is Context,AccessControlEnumerable{
 
 
         uint256 total=currAction.highestBid;
-        uint256 busdOrgAmount=total*metaInfo.BUSDOrganizeRate()/FRACTION_INT_BASE;
-        uint256 busdTeamAmount=total*metaInfo.BUSDTeamRate()/FRACTION_INT_BASE;
+        uint256 usdOrgAmount=total*metaInfo.USDOrganizeRate()/FRACTION_INT_BASE;
+        uint256 usdTeamAmount=total*metaInfo.USDTeamRate()/FRACTION_INT_BASE;
 
-        ERC20(moneyTokenAddr).transfer(currAction.beneficiary,total-busdOrgAmount-busdTeamAmount);
-        ERC20(moneyTokenAddr).transfer(metaInfo.BUSDOrganizeAddress(),busdOrgAmount);
-        ERC20(moneyTokenAddr).transfer(metaInfo.BUSDTeamAddress(),busdTeamAmount);
+        ERC20(moneyTokenAddr).transfer(currAction.beneficiary,total-usdOrgAmount-usdTeamAmount);
+        ERC20(moneyTokenAddr).transfer(metaInfo.USDOrganizeAddress(),usdOrgAmount);
+        ERC20(moneyTokenAddr).transfer(metaInfo.USDTeamAddress(),usdTeamAmount);
         ERC721(nftAddr).transferFrom(address(this),currAction.highestBidder,tokenId);
 
         lastEventSeqNum.increment();

@@ -137,7 +137,7 @@ contract EggNFT is PresetMinterPauserAutoIdNFT
         require(dragonNFT.ownerOf(fatherTokenId)==_msgSender(),"EggNFT: father is not yours");
         require(dragonNFT.ownerOf(motherTokenId)==_msgSender(),"EggNFT: mother is not yours");
 
-        require(!dragonNFT.isCloseRelativeWith(fatherTokenId,motherTokenId),"EggNFT: Inbreeding is prohibited");
+        require(!isCloseRelativeWith(fatherTokenId,motherTokenId),"EggNFT: Inbreeding is prohibited");
 
         HatchCostInfo memory hatchCostInfoFather = dragonNFT.hatchCostInfo(fatherTokenId);
         HatchCostInfo memory hatchCostInfoMonther = dragonNFT.hatchCostInfo(motherTokenId);
@@ -200,6 +200,42 @@ contract EggNFT is PresetMinterPauserAutoIdNFT
         }
         require(infos[tokenId].hatchingBeginTime==0, "EggNFT: the token is hatching");
         super._beforeTokenTransfer(from, to, tokenId);
+    }
+
+    function isCloseRelativeWith(uint256 tokenId1,uint256 tokenId2) view public returns(bool){
+        DragonNFT dragonNFT=DragonNFT(MetaInfoDb(metaInfoDbAddr).dragonNFTAddr());
+        HeredityInfo memory hinfo=dragonNFT.getHeredityInfo(tokenId1);
+        uint256 [7] memory ids=[
+            tokenId1,
+            hinfo.fatherFamily.dragonId,
+            hinfo.fatherFamily.fatherDragonId,
+            hinfo.fatherFamily.montherDragonId,
+            hinfo.motherFamily.dragonId,
+            hinfo.motherFamily.fatherDragonId,
+            hinfo.motherFamily.montherDragonId
+        ];
+        HeredityInfo memory hinfo2=dragonNFT.getHeredityInfo(tokenId2);
+        uint256 [7] memory ids2=[
+            tokenId2,
+            hinfo2.fatherFamily.dragonId,
+            hinfo2.fatherFamily.fatherDragonId,
+            hinfo2.fatherFamily.montherDragonId,
+            hinfo2.motherFamily.dragonId,
+            hinfo2.motherFamily.fatherDragonId,
+            hinfo2.motherFamily.montherDragonId
+        ];
+
+        for (uint256 j=0;j<7;++j){
+            uint256 id=ids2[j];
+            if (id == 0) continue;
+            for (uint256 i=0;i<7;++i){
+                if (ids[i] == 0) continue;
+                if (id==ids[i]){
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
 }

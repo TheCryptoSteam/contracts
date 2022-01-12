@@ -63,11 +63,11 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
     mapping(uint256/** tokenId */=>uint256 [INFO_FIELDS_COUNT])  public fields;
     mapping(uint256/** tokenId */=>uint256 [INFO_FIELDSEX_COUNT])  public fieldsEx;
 
-    mapping(address=>EnumerableSet.UintSet ) internal _lockedTokensOf;
 
     mapping(uint256/**rarity id */=>uint256/*total*/) public balanceInRarity;
 
     uint256 private _currentInfoId;
+    uint256 [5/**star */] public levelOfStar;
 
     event NewDragonMinted(uint256 [INFO_FIELDS_COUNT] info, uint256 [INFO_FIELDSEX_COUNT] infoEx,uint256 indexed eventSeqNum);
     event DragonBurned(uint256 tokenId,uint256 indexed eventSeqNum);
@@ -88,7 +88,7 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
         _setupRole(MINTER_ROLE, eggNFTAddr);
         _setupRole(MINTER_ROLE, address(this));
         signPublicKey = signPublicKey_;
-
+        levelOfStar = [5, 15, 25, 35, 45];
     }
 
 
@@ -309,6 +309,8 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
     function mint(uint256 class,uint256 fatherTokenId,uint256 motherTokenId,address to) public{
         require(hasRole(MINTER_ROLE, _msgSender()), "DragonNFT: must have minter role to mint");
         require(class!=CLASS_ULTIMA,"DragonNFT: must call mintUlitma for Ulitma");
+        require(_exists(fatherTokenId) && _exists(motherTokenId),"DragonNFT: parent id not exists");
+
         MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
         uint256 rnd = metaInfo.rand3();
 
@@ -366,6 +368,9 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
         MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
 
         uint256 [INFO_FIELDS_COUNT] storage info=fields[dragonTokenId];
+
+        require(info[LEVEL] >= levelOfStar[info[STAR]], "DragonNFT: level too low to updateStar");
+        require(info[STAR] < 5, "DragonNFT: reach top star level");
 
         uint256 [5] memory foodDragons=metaInfo.getStarUpdateTable(info[RARITY],info[STAR]);
 
@@ -476,38 +481,5 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
             emit  DragonStateChanged(tokenId,info[LEVEL],info[LIFE_VALUE],info[ATTACK_VALUE],info[DEFENSE_VALUE],info[SPEED_VALUE],info[INIT_STAKING_RUBY_POWER],lastEventSeqNum.current());
         }
     }
-    function isCloseRelativeWith(uint256 tokenId1,uint256 tokenId2) view public returns(bool){
-        HeredityInfo memory hinfo=getHeredityInfo(tokenId1);
-        uint256 [7] memory ids=[
-            tokenId1,
-            hinfo.fatherFamily.dragonId,
-            hinfo.fatherFamily.fatherDragonId,
-            hinfo.fatherFamily.montherDragonId,
-            hinfo.motherFamily.dragonId,
-            hinfo.motherFamily.fatherDragonId,
-            hinfo.motherFamily.montherDragonId
-        ];
-        HeredityInfo memory hinfo2=getHeredityInfo(tokenId2);
-        uint256 [7] memory ids2=[
-            tokenId2,
-            hinfo2.fatherFamily.dragonId,
-            hinfo2.fatherFamily.fatherDragonId,
-            hinfo2.fatherFamily.montherDragonId,
-            hinfo2.motherFamily.dragonId,
-            hinfo2.motherFamily.fatherDragonId,
-            hinfo2.motherFamily.montherDragonId
-        ];
 
-        for (uint256 j=0;j<7;++j){
-            uint256 id=ids2[j];
-            if (id == 0) continue;
-            for (uint256 i=0;i<7;++i){
-                if (ids[i] == 0) continue;
-                if (id==ids[i]){
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
 }

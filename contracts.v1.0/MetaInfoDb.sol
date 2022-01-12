@@ -76,7 +76,7 @@ uint256 constant STAKING_NESTS_SUPPLY = 6;
 uint256 constant HATCHING_NESTS_SUPPLY= 6;
 
 uint256 constant MAX_STAKING_CST_WEIGHT_DELTA=FRACTION_INT_BASE/STAKING_NESTS_SUPPLY;
-uint256 constant MAX_STAKING_CST_POWER_BYONE=4631;
+uint256 constant MAX_STAKING_CST_POWER_BYONE=4021;
 uint256 constant MAX_STAKING_CST_POWER = MAX_STAKING_CST_POWER_BYONE*STAKING_NESTS_SUPPLY;
 
 uint256 constant CLASS_NONE =0;
@@ -123,14 +123,14 @@ contract MetaInfoDb is AccessControlEnumerable
     address public RUBYTeamAddress;
     uint256 public RUBYTeamRate; //20%
 
-    address public BUSDBonusPoolAddress;
-    uint256 public BUSDBonusPoolRate; //70%
+    address public USDBonusPoolAddress;
+    uint256 public USDBonusPoolRate; //70%
 
-    address public BUSDOrganizeAddress;
-    uint256 public BUSDOrganizeRate; //10%
+    address public USDOrganizeAddress;
+    uint256 public USDOrganizeRate; //10%
 
-    address public BUSDTeamAddress;
-    uint256 public BUSDTeamRate; //20%
+    address public USDTeamAddress;
+    uint256 public USDTeamRate; //20%
 
     address public marketFeesReceiverAddress;
 
@@ -150,7 +150,6 @@ contract MetaInfoDb is AccessControlEnumerable
 
     uint256 public defaultHatchingDuration;
 
-
     Scope [RARITY_MAX+1] public lifeValueScopeArray;
     Scope [RARITY_MAX+1] public attackValueScopeArray;
     Scope [RARITY_MAX+1] public defenseValueScopeArray;
@@ -168,7 +167,7 @@ contract MetaInfoDb is AccessControlEnumerable
     uint256 [6] public elementHeredityProbArray;
 
 
-    uint256 [5/**rarity */][5/**star */] [5/**rarity */] public starUpdateTable; 
+    uint256 [5/**rarity */][5/**star */] [5/**rarity */] public starUpdateTable;
 
 
     uint256 [5/**rarity */] public qualityFactors;
@@ -256,9 +255,9 @@ contract MetaInfoDb is AccessControlEnumerable
         RUBYBonusPoolRate=2000; //20%
         RUBYOrganizeRate=1000; //10%
         RUBYTeamRate=2000; //20%
-        BUSDBonusPoolRate=7000; //70%
-        BUSDOrganizeRate=1000; //10%
-        BUSDTeamRate=2000; //20%
+        USDBonusPoolRate=7000; //70%
+        USDOrganizeRate=1000; //10%
+        USDTeamRate=2000; //20%
 
         outputFoodProbabilityArray=[790,160,40,10,0];
         outputFoodScopeArray[NORMAL_RARITY]=Scope(2000 wei,9999 wei);
@@ -314,6 +313,8 @@ contract MetaInfoDb is AccessControlEnumerable
 
     function initStarTable() external {
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to initAttr");
+        
+
         starUpdateTable[NORMAL_RARITY]=[
             [1,0,0,0,0],
             [1,0,0,0,0],
@@ -533,31 +534,31 @@ contract MetaInfoDb is AccessControlEnumerable
         RUBYTeamRate = rate;
     }
 
-    function setBUSDBonusPoolAddress(address addr) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setBUSDBonusPoolAddress");
-        BUSDBonusPoolAddress = addr;
+    function setUSDBonusPoolAddress(address addr) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setUSDBonusPoolAddress");
+        USDBonusPoolAddress = addr;
     }
-    function setBUSDBonusPoolRate(uint256 rate) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setBUSDBonusPoolRate");
-        BUSDBonusPoolRate = rate;
-    }
-
-    function setBUSDOrganizeAddress(address addr) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setBUSDOrganizeAddress");
-        BUSDOrganizeAddress = addr;
-    }
-    function setBUSDOrganizeRate(uint256 rate) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setBUSDOrganizeRate");
-        BUSDOrganizeRate = rate;
+    function setUSDBonusPoolRate(uint256 rate) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setUSDBonusPoolRate");
+        USDBonusPoolRate = rate;
     }
 
-    function setBUSDTeamAddress(address addr) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setBUSDTeamAddress");
-        BUSDTeamAddress = addr;
+    function setUSDOrganizeAddress(address addr) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setUSDOrganizeAddress");
+        USDOrganizeAddress = addr;
     }
-    function setBUSDTeamRate(uint256 rate) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setBUSDTeamRate");
-        BUSDTeamRate = rate;
+    function setUSDOrganizeRate(uint256 rate) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setUSDOrganizeRate");
+        USDOrganizeRate = rate;
+    }
+
+    function setUSDTeamAddress(address addr) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setUSDTeamAddress");
+        USDTeamAddress = addr;
+    }
+    function setUSDTeamRate(uint256 rate) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setUSDTeamRate");
+        USDTeamRate = rate;
     }
 
     function getStarUpdateTable(uint256 rarity,uint256 star) view public returns(uint256[5] memory){
