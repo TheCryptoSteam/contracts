@@ -61,6 +61,10 @@ contract AccountInfo is AccessControl
         _;
     }
 
+    modifier onlyAdmin {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Must have admin role.");
+        _;
+    }
     constructor(address metaInfoDbAddr_,address signPublicKey_){
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         signPublicKey=signPublicKey_;
@@ -182,8 +186,7 @@ contract AccountInfo is AccessControl
 
 
     //EggNFT contract call it 
-    function putInHatchingNest(address account, uint256 eggTokenId) public returns(bool){
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "AccountInfo: must have admin role to putInHatchingNest");
+    function putInHatchingNest(address account, uint256 eggTokenId) public onlyAdmin returns(bool){
         require(hatchingNestsCount(account)>hatchingNestsSet[account].length(),"AccountInfo: no enought HatchingNests");
         bool ret = hatchingNestsSet[account].add(eggTokenId);
         lastEventSeqNum.increment();
@@ -192,8 +195,7 @@ contract AccountInfo is AccessControl
     }
 
     //EggNFT contract call it 
-    function takeOutHatchingNest(address account, uint256 eggTokenId) public returns(bool){
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "AccountInfo: must have admin role to takeOutHatchingNest");
+    function takeOutHatchingNest(address account, uint256 eggTokenId) public onlyAdmin returns(bool){
         bool ret= hatchingNestsSet[account].remove(eggTokenId);
         lastEventSeqNum.increment();
         emit AccountHatchingNestsFree(account,eggTokenId,lastEventSeqNum.current());
@@ -201,20 +203,17 @@ contract AccountInfo is AccessControl
     }
 
     //manager interfaces
-    function setSignPublicKey(address signPublicKey_) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "AccountInfo: must have admin role");
+    function setSignPublicKey(address signPublicKey_) external onlyAdmin {
         signPublicKey = signPublicKey_;
     }
 
-    function setExtInfo(address account,string memory name,string memory value) public{
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "AccountInfo: must have admin role to setExtInfo");
+    function setExtInfo(address account,string memory name,string memory value) public onlyAdmin {
         extInfos[account][name]=value;
         lastEventSeqNum.increment();
         emit AccountExtInfoChanged(account,name,value,lastEventSeqNum.current());
     }
 
-    function resetAddress(address metaInfoDbAddr_) public {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "AccountInfo: must have admin role to resetAddress");
+    function resetAddress(address metaInfoDbAddr_) public onlyAdmin {
 
         metaInfoDbAddr =metaInfoDbAddr_;
         MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
@@ -222,8 +221,7 @@ contract AccountInfo is AccessControl
         _setupRole(DEFAULT_ADMIN_ROLE, metaInfo.eggNFTAddr());
     }
 
-    function addHatchingNests(address account,uint256 nestsCount) public{
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "AccountInfo: must have admin role to addHatchingNests");
+    function addHatchingNests(address account,uint256 nestsCount) public onlyAdmin {
         require(infos[account].hatchingNests+nestsCount<=HATCHING_NESTS_SUPPLY,"AccountInfo: hatchingNests must less than HATCHING_NESTS_SUPPLY");
         infos[account].hatchingNests+=nestsCount;
 

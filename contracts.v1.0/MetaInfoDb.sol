@@ -181,6 +181,11 @@ contract MetaInfoDb is AccessControlEnumerable
 
     IRandomHolder private randomHolder;
 
+    modifier onlyAdmin {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Must have admin role.");
+        _;
+    }
+
     constructor(address CSTAddr,address rubyAddr,address [3] memory chestAddrArray,address playerStatusQueryInterface_){
         CSTAddress=CSTAddr;
         rubyAddress=rubyAddr;
@@ -270,8 +275,7 @@ contract MetaInfoDb is AccessControlEnumerable
 
     }
 
-    function initAttr() external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to initAttr");
+    function initAttr() external onlyAdmin {
         stakingCSTPowerArray[NORMAL_RARITY]=Scope(0,0);//0
         stakingCSTPowerArray[GOOD_RARITY]=Scope(1,9);//1~9
         stakingCSTPowerArray[RARE_RARITY]=Scope(10,19);//10~19
@@ -311,8 +315,7 @@ contract MetaInfoDb is AccessControlEnumerable
         
     }
 
-    function initStarTable() external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to initAttr");
+    function initStarTable() external onlyAdmin {
         
 
         starUpdateTable[NORMAL_RARITY]=[
@@ -366,18 +369,15 @@ contract MetaInfoDb is AccessControlEnumerable
         return 5;
     }
 
-    function setRewardHatchingNestsCST(uint256 [5] memory nestsCSTs) external{
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setRewardHatchingNestsCST");
+    function setRewardHatchingNestsCST(uint256 [5] memory nestsCSTs) external onlyAdmin {
         rewardHatchingNestsCST=nestsCSTs;
     }
 
-    function setPlayerStatusQueryInterface(address playerStatusQueryInterface_) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setPlayerStatusQueryInterface");
+    function setPlayerStatusQueryInterface(address playerStatusQueryInterface_) external onlyAdmin {
         playerStatusQueryInterface=playerStatusQueryInterface_;
     }
 
-    function setDefaultHatchingDuration(uint256 hatchingDuration) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setDefaultHatchingDuration");
+    function setDefaultHatchingDuration(uint256 hatchingDuration) external onlyAdmin {
         defaultHatchingDuration=hatchingDuration;
     }
 
@@ -385,35 +385,29 @@ contract MetaInfoDb is AccessControlEnumerable
         return outputFoodProbabilityArray;
     }
 
-    function setOutputFoodProbabilityArray(uint256 [RARITY_MAX+1] memory outputFoodProbabilityArray_) external{
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setOutputFoodProbabilityArray");
+    function setOutputFoodProbabilityArray(uint256 [RARITY_MAX+1] memory outputFoodProbabilityArray_) external onlyAdmin {
         outputFoodProbabilityArray=outputFoodProbabilityArray_;
     }
 
-    function setRandomHolderInterface(address randomHolder_) external{
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setRandomHolderInterface");
+    function setRandomHolderInterface(address randomHolder_) external onlyAdmin {
         randomHolder=IRandomHolder(randomHolder_);
     }
 
-    function setMarketFeesRate(uint256 marketFeesRate_) external{
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setMarketFeesRate");
-        require(marketFeesRate_<FRACTION_INT_BASE,"MetaInfoDb: marketFeesRate invalid");
+    function setMarketFeesRate(uint256 marketFeesRate_) external onlyAdmin {
+        require(marketFeesRate_<(FRACTION_INT_BASE/10),"MetaInfoDb: marketFeesRate invalid");
         marketFeesRate=marketFeesRate_;
     }
 
-    function setMarketFeesReceiverAddress(address marketFeesReceiverAddress_) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setMarketFeesReceiverAddress");
+    function setMarketFeesReceiverAddress(address marketFeesReceiverAddress_) external onlyAdmin {
         marketFeesReceiverAddress=marketFeesReceiverAddress_;
     }
 
-    function setChestTokenAddress(uint256 kind,address chestAddr) external{
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setChestTokenAddress");
+    function setChestTokenAddress(uint256 kind,address chestAddr) external onlyAdmin {
         require(kind < chestAddressArray.length, "MetaInfoDb: index out of bound");
         chestAddressArray[kind]=chestAddr;
     }
 
-    function setRarityParam(uint256 kind,uint256 rarity,uint256 probabilityFloat) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setRarityParam");
+    function setRarityParam(uint256 kind,uint256 rarity,uint256 probabilityFloat) external onlyAdmin {
         require(rarity<=LEGEND_RARITY);
         rarityProbabilityFloatArray[kind][rarity]=probabilityFloat;
     }
@@ -426,8 +420,7 @@ contract MetaInfoDb is AccessControlEnumerable
         return rarityProbabilityFloatArray[1];
     }
 
-    function setHatchCostInfo(uint256 index,uint256 CSTCost,uint256 rubyCost) external{
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setHatchCostInfo");
+    function setHatchCostInfo(uint256 index,uint256 CSTCost,uint256 rubyCost) external onlyAdmin {
         require(index<HATCH_MAX_TIMES,"MetaInfo: index must less then HATCH_MAX_TIMES");
         hatchCostInfos[index]=HatchCostInfo(CSTCost,rubyCost);
     }
@@ -436,8 +429,7 @@ contract MetaInfoDb is AccessControlEnumerable
         return elementHeredityProbArray;
     }
 
-    function setElementHeredityProbArray(uint256 [6] memory probs) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setElementHeredityProbArray");
+    function setElementHeredityProbArray(uint256 [6] memory probs) external onlyAdmin {
         elementHeredityProbArray=probs;
     }
 
@@ -461,103 +453,82 @@ contract MetaInfoDb is AccessControlEnumerable
         return skillsLibProb[index];
     }
 
-    function setCSTAddr(address addr) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setCSTAddr");
+    function setCSTAddr(address addr) external onlyAdmin {
         CSTAddress = addr;
     }
 
-    function setRubyAddr(address addr) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setRubyAddr");
+    function setRubyAddr(address addr) external onlyAdmin {
         rubyAddress = addr;
     }
 
 
-    function setDragonNFTAddr(address addr) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setDragonNFTAddr");
+    function setDragonNFTAddr(address addr) external onlyAdmin {
         dragonNFTAddr = addr;
     }
 
-    function setEggNFTAddr(address addr) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setEggNFTAddr");
+    function setEggNFTAddr(address addr) external onlyAdmin {
         eggNFTAddr = addr;
     }
 
-    function setAccountInfoAddr(address addr) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setAccountInfoAddr");
+    function setAccountInfoAddr(address addr) external onlyAdmin {
         accountInfoAddr = addr;
     }
 
-    function setCSTBonusPoolAddress(address addr) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setCSTBonusPoolAddress");
+    function setCSTBonusPoolAddress(address addr) external onlyAdmin {
         CSTBonusPoolAddress = addr;
     }
-    function setCSTBonusPoolRate(uint256 rate) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setCSTBonusPoolRate");
+    function setCSTBonusPoolRate(uint256 rate) external onlyAdmin {
         CSTBonusPoolRate = rate;
     }
 
 
-    function setCSTOrganizeAddress(address addr) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setCSTOrganizeAddress");
+    function setCSTOrganizeAddress(address addr) external onlyAdmin {
         CSTOrganizeAddress = addr;
     }
 
-    function setCSTOrganizeRate(uint256 rate) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setCSTOrganizeRate");
+    function setCSTOrganizeRate(uint256 rate) external onlyAdmin {
         CSTOrganizeRate = rate;
     }
 
-    function setRUBYBonusPoolAddress(address addr) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setRUBYBonusPoolAddress");
+    function setRUBYBonusPoolAddress(address addr) external onlyAdmin {
         RUBYBonusPoolAddress = addr;
     }
-    function setRUBYBonusPoolRate(uint256 rate) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setRUBYBonusPoolRate");
+    function setRUBYBonusPoolRate(uint256 rate) external onlyAdmin {
         RUBYBonusPoolRate = rate;
     }
 
-    function setRUBYOrganizeAddress(address addr) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setRUBYOrganizeAddress");
+    function setRUBYOrganizeAddress(address addr) external onlyAdmin {
         RUBYOrganizeAddress = addr;
     }
-    function setRUBYOrganizeRate(uint256 rate) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setRUBYOrganizeRate");
+    function setRUBYOrganizeRate(uint256 rate) external onlyAdmin {
         RUBYOrganizeRate = rate;
     }
 
-    function setRUBYTeamAddress(address addr) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setRUBYTeamAddress");
+    function setRUBYTeamAddress(address addr) external onlyAdmin {
         RUBYTeamAddress = addr;
     }
-    function setRUBYTeamRate(uint256 rate) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setRUBYTeamRate");
+    function setRUBYTeamRate(uint256 rate) external onlyAdmin {
         RUBYTeamRate = rate;
     }
 
-    function setUSDBonusPoolAddress(address addr) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setUSDBonusPoolAddress");
+    function setUSDBonusPoolAddress(address addr) external onlyAdmin {
         USDBonusPoolAddress = addr;
     }
-    function setUSDBonusPoolRate(uint256 rate) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setUSDBonusPoolRate");
+    function setUSDBonusPoolRate(uint256 rate) external onlyAdmin {
         USDBonusPoolRate = rate;
     }
 
-    function setUSDOrganizeAddress(address addr) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setUSDOrganizeAddress");
+    function setUSDOrganizeAddress(address addr) external onlyAdmin {
         USDOrganizeAddress = addr;
     }
-    function setUSDOrganizeRate(uint256 rate) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setUSDOrganizeRate");
+    function setUSDOrganizeRate(uint256 rate) external onlyAdmin {
         USDOrganizeRate = rate;
     }
 
-    function setUSDTeamAddress(address addr) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setUSDTeamAddress");
+    function setUSDTeamAddress(address addr) external onlyAdmin {
         USDTeamAddress = addr;
     }
-    function setUSDTeamRate(uint256 rate) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setUSDTeamRate");
+    function setUSDTeamRate(uint256 rate) external onlyAdmin {
         USDTeamRate = rate;
     }
 
@@ -565,73 +536,59 @@ contract MetaInfoDb is AccessControlEnumerable
         return starUpdateTable[rarity][star];
     }
 
-    function setStarUpdateTable(uint256 rarity, uint256 star, uint256 [RARITY_MAX+1] memory rarityTable) external{
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setStarUpdateTable");
+    function setStarUpdateTable(uint256 rarity, uint256 star, uint256 [RARITY_MAX+1] memory rarityTable) external onlyAdmin {
         starUpdateTable[rarity][star]=rarityTable;
     }
 
-    function setStakingCSTPowerArray(uint256 rarity, uint256 lower, uint256 upper) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setStakingCSTPowerArray");
+    function setStakingCSTPowerArray(uint256 rarity, uint256 lower, uint256 upper) external onlyAdmin {
         stakingCSTPowerArray[rarity]=Scope(lower, upper);
     }
 
-    function setStakingRubyPowerArray(uint256 rarity, uint256 lower, uint256 upper) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setStakingRubyPowerArray");
+    function setStakingRubyPowerArray(uint256 rarity, uint256 lower, uint256 upper) external onlyAdmin {
         stakingRubyPowerArray[rarity]=Scope(lower, upper);
     }
 
-    function setLifeValueScopeArray(uint256 rarity, uint256 lower, uint256 upper) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setLifeValueScopeArray");
+    function setLifeValueScopeArray(uint256 rarity, uint256 lower, uint256 upper) external onlyAdmin {
         lifeValueScopeArray[rarity]=Scope(lower, upper);
     }
     
-    function setAttackValueScopeArray(uint256 rarity, uint256 lower, uint256 upper) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setAttackValueScopeArray");
+    function setAttackValueScopeArray(uint256 rarity, uint256 lower, uint256 upper) external onlyAdmin {
         attackValueScopeArray[rarity]=Scope(lower, upper);
     }
 
-    function setDefenseValueScopeArray(uint256 rarity, uint256 lower, uint256 upper) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setDefenseValueScopeArray");
+    function setDefenseValueScopeArray(uint256 rarity, uint256 lower, uint256 upper) external onlyAdmin {
         defenseValueScopeArray[rarity]=Scope(lower, upper);
     }
 
-    function setSpeedValueScopeArray(uint256 rarity, uint256 lower, uint256 upper) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setSpeedValueScopeArray");
+    function setSpeedValueScopeArray(uint256 rarity, uint256 lower, uint256 upper) external onlyAdmin {
         speedValueScopeArray[rarity]=Scope(lower, upper);
     }
 
-    function setElementProbArray(uint256 element, uint256 prob) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setElementProbArray");
+    function setElementProbArray(uint256 element, uint256 prob) external onlyAdmin {
         elementProbArray[element]=prob;
     }
 
-    function setQualityFactors(uint256 rarity, uint256 factor) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setQualityFactors");
+    function setQualityFactors(uint256 rarity, uint256 factor) external onlyAdmin {
         qualityFactors[rarity]=factor;
     }
 
-    function setOutputFoodScopeArray(uint256 rarity, uint256 lower, uint256 upper) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setOutputFoodScopeArray");
+    function setOutputFoodScopeArray(uint256 rarity, uint256 lower, uint256 upper) external onlyAdmin {
         outputFoodScopeArray[rarity]=Scope(lower, upper);
     }
 
-    function setSkillsLib(uint256 elementId,uint256 count) external{
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setSkillsLib");
+    function setSkillsLib(uint256 elementId,uint256 count) external onlyAdmin {
         skillsLib[elementId]=count;
     }
 
-    function setPartsLib(uint256 elementId,uint256 [4] memory counts) external{
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setPartsLib");
+    function setPartsLib(uint256 elementId,uint256 [4] memory counts) external onlyAdmin {
         partsLib[elementId]=counts;
     }
 
-    function setPartsLibProb(uint256 index, uint256 [6] memory probs) external{
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setPartsLibProb");
+    function setPartsLibProb(uint256 index, uint256 [6] memory probs) external onlyAdmin {
         partsLibProb[index]=probs;
     }
 
-    function setSkillsLibProb(uint256 index, uint256 [6] memory probs) external{
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MetaInfoDb: must have admin role to setSkillsLibProb");
+    function setSkillsLibProb(uint256 index, uint256 [6] memory probs) external onlyAdmin {
         skillsLibProb[index]=probs;
     }
 

@@ -63,9 +63,6 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
     mapping(uint256/** tokenId */=>uint256 [INFO_FIELDS_COUNT])  public fields;
     mapping(uint256/** tokenId */=>uint256 [INFO_FIELDSEX_COUNT])  public fieldsEx;
 
-    mapping(uint256/** tokenId */=>uint256 [INFO_FIELDS_COUNT])  public fieldsTomb;
-    mapping(uint256/** tokenId */=>uint256 [INFO_FIELDSEX_COUNT])  public fieldsExTomb;
-
 
     mapping(uint256/**rarity id */=>uint256/*total*/) public balanceInRarity;
 
@@ -114,14 +111,6 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
             weight=MAX_STAKING_CST_WEIGHT_DELTA;
         }
         return weight+FRACTION_INT_BASE;
-    }
-
-    function getFields(uint256 tokenId) view public returns(uint256[INFO_FIELDS_COUNT] memory){
-        return fields[tokenId][ID] > 0 ? fields[tokenId] : fieldsTomb[tokenId];
-    }
-
-    function getFieldsEx(uint256 tokenId) view public returns(uint256[INFO_FIELDSEX_COUNT] memory){
-        return fields[tokenId][ID] > 0 ? fieldsEx[tokenId] : fieldsExTomb[tokenId];
     }
 
     function initDragonInfo(uint256 id,uint256 class,uint256 kind, uint256 fatherId,uint256 motherId,uint256 rnd) internal {
@@ -209,17 +198,14 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
 
 
     function getHeredityInfo(uint256 tokenId) view public returns(HeredityInfo memory){
-        uint256[INFO_FIELDS_COUNT] memory info = getFields(tokenId);
-        return genHeredityInfo(tokenId,info[FATHER_ID],info[MOTHER_ID]);
+        return genHeredityInfo(tokenId,fields[tokenId][FATHER_ID],fields[tokenId][MOTHER_ID]);
     }
 
     function genHeredityInfo(uint256 tokenId,uint256 fatherTokenId,uint256 motherTokenId )view  public returns(HeredityInfo memory){
         HeredityInfo memory info;
         info.id=tokenId;
-        uint256[INFO_FIELDS_COUNT] memory infoFather = getFields(fatherTokenId);
-        uint256[INFO_FIELDS_COUNT] memory infoMother = getFields(motherTokenId);
-        info.fatherFamily=FamilyDragonInfo(fatherTokenId,infoFather[FATHER_ID],infoFather[MOTHER_ID]);
-        info.motherFamily=FamilyDragonInfo(motherTokenId,infoMother[FATHER_ID],infoMother[MOTHER_ID]);
+        info.fatherFamily=FamilyDragonInfo(fatherTokenId,fields[fatherTokenId][FATHER_ID],fields[fatherTokenId][MOTHER_ID]);
+        info.motherFamily=FamilyDragonInfo(motherTokenId,fields[motherTokenId][FATHER_ID],fields[motherTokenId][MOTHER_ID]);
         return info;
     }
 
@@ -259,31 +245,27 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
         }
 
         uint256 index=MathEx.probabilisticRandom6R(parts, rnd);
-        uint256 [INFO_FIELDSEX_COUNT] memory infoExSel = getFieldsEx(selectTokenId);
 
         if (index==0 ){
             //return infoExs[selectTokenId].partsIds[partsIndex];
-            return infoExSel[PARTS_IDS+partsIndex];
+            return fieldsEx[selectTokenId][PARTS_IDS+partsIndex];
         }else if(index==1){
             if (selectTokenId!=fatherTokenId && selectTokenId!=motherTokenId){
                 //return infoExs[selectTokenId].partsIds[partsIndex];
-                return infoExSel[PARTS_IDS+partsIndex];
+                return fieldsEx[selectTokenId][PARTS_IDS+partsIndex];
             }else{
                 HeredityInfo memory family=getHeredityInfo(selectTokenId);
-                uint256 [INFO_FIELDSEX_COUNT] memory infoExFather = getFieldsEx(family.fatherFamily.dragonId);
-                uint256 [INFO_FIELDSEX_COUNT] memory infoExMother = getFieldsEx(family.motherFamily.dragonId);
-
-                if (infoExFather[ELEMENT_ID]==infoExSel[ELEMENT_ID]){
-                    return infoExFather[PARTS_IDS+partsIndex];
+                if (fieldsEx[family.fatherFamily.dragonId][ELEMENT_ID]==fieldsEx[selectTokenId][ELEMENT_ID]){
+                    return fieldsEx[family.fatherFamily.dragonId][PARTS_IDS+partsIndex];
                 }
-                if (infoExMother[ELEMENT_ID]==infoExSel[ELEMENT_ID]){
-                    return infoExMother[PARTS_IDS+partsIndex];
+                if (fieldsEx[family.motherFamily.dragonId][ELEMENT_ID]==fieldsEx[selectTokenId][ELEMENT_ID]){
+                    return fieldsEx[family.motherFamily.dragonId][PARTS_IDS+partsIndex];
                 }
 
             }
         }
 
-        return rnd/10 % (metaInfo.partsLib(infoExSel[ELEMENT_ID],partsIndex))+1;
+        return rnd/10 % (metaInfo.partsLib(fieldsEx[selectTokenId][ELEMENT_ID],partsIndex))+1;
 
     }
 
@@ -301,27 +283,24 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
             parts=metaInfo.getSkillsProb(1);
         }
         uint256 index=MathEx.probabilisticRandom6R(parts, rnd);
-        uint256 [INFO_FIELDSEX_COUNT] memory infoExSel = getFieldsEx(selectTokenId);
 
         if (index==0 ){
-            return infoExSel[SKILL_ID];
+            return fieldsEx[selectTokenId][SKILL_ID];
         }else if(index==1){
             if (selectTokenId!=fatherTokenId && selectTokenId!=motherTokenId){
-                return infoExSel[SKILL_ID];
+                return fieldsEx[selectTokenId][SKILL_ID];
             }else{
                 HeredityInfo memory family=getHeredityInfo(selectTokenId);
-                uint256 [INFO_FIELDSEX_COUNT] memory infoExFather = getFieldsEx(family.fatherFamily.dragonId);
-                uint256 [INFO_FIELDSEX_COUNT] memory infoExMother = getFieldsEx(family.motherFamily.dragonId);
-                if (infoExFather[ELEMENT_ID]==infoExSel[ELEMENT_ID]){
-                    return infoExFather[SKILL_ID];
+                if (fieldsEx[family.fatherFamily.dragonId][ELEMENT_ID]==fieldsEx[selectTokenId][ELEMENT_ID]){
+                    return fieldsEx[family.fatherFamily.dragonId][SKILL_ID];
                 }
-                if (infoExMother[ELEMENT_ID]==infoExSel[ELEMENT_ID]){
-                    return infoExMother[SKILL_ID];
+                if (fieldsEx[family.motherFamily.dragonId][ELEMENT_ID]==fieldsEx[selectTokenId][ELEMENT_ID]){
+                    return fieldsEx[family.motherFamily.dragonId][SKILL_ID];
                 }
             }
         }
 
-        return rnd/10 % metaInfo.skillsLib(infoExSel[ELEMENT_ID]) + 1;
+        return rnd/10 % metaInfo.skillsLib(fieldsEx[selectTokenId][ELEMENT_ID]) + 1;
     }
 
 
@@ -330,7 +309,7 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
     function mint(uint256 class,uint256 fatherTokenId,uint256 motherTokenId,address to) public{
         require(hasRole(MINTER_ROLE, _msgSender()), "DragonNFT: must have minter role to mint");
         require(class!=CLASS_ULTIMA,"DragonNFT: must call mintUlitma for Ulitma");
-        require((fields[fatherTokenId][ID] > 0 || fieldsTomb[fatherTokenId][ID] > 0) && (fields[motherTokenId][ID] > 0 || fieldsTomb[motherTokenId][ID] > 0),"DragonNFT: parent id not exists");
+        require(_exists(fatherTokenId) && _exists(motherTokenId),"DragonNFT: parent id not exists");
 
         MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
         uint256 rnd = metaInfo.rand3();
@@ -343,8 +322,7 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
         initDragonInfo(_currentInfoId,class,SUPER_CHEST,fatherTokenId, motherTokenId,rnd/1e7);
 
         {
-            uint256 [INFO_FIELDSEX_COUNT] memory infoExSel = getFieldsEx(selDragonId);
-            infoEx[ELEMENT_ID]=infoExSel[ELEMENT_ID];
+            infoEx[ELEMENT_ID]=fieldsEx[selDragonId][ELEMENT_ID];
 
             infoEx[PARTS_IDS+PARTS_HEAD]=genPartsFromHeredityR(fatherTokenId,motherTokenId,selDragonId,PARTS_HEAD, rnd/100);
             infoEx[PARTS_IDS+PARTS_BODY]=genPartsFromHeredityR(fatherTokenId,motherTokenId,selDragonId,PARTS_BODY, rnd/1000);
@@ -422,8 +400,6 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
         if (balanceInRarity[rarity]>1){
             balanceInRarity[rarity]-=1;
         }
-        fieldsTomb[tokenId] = fields[tokenId];
-        fieldsExTomb[tokenId] = fieldsEx[tokenId];
         delete fields[tokenId];
         delete fieldsEx[tokenId];
 
@@ -435,8 +411,40 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
 
 
 
+    function updateState(uint256 tokenId,uint256 level, uint256 life,uint256 attack,uint256 defense,uint256 speed,uint256 rubyPower,uint256 expiresAt, bytes16 actionUUID, uint8 _v, bytes32 _r, bytes32 _s) public {
+        //require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "DragonNFT: must have admin role");
+        if (!hasRole(DEFAULT_ADMIN_ROLE, _msgSender())){
+            require(actionUUIDs[actionUUID]==0,"AccountInfo: action has been executed");
+            require(expiresAt > block.timestamp, "time expired");
+            bytes32 messageHash =  keccak256(
+                abi.encodePacked(
+                    signPublicKey,
+                    tokenId,
+                    "updateState",
+                    level,
+                    life, attack, defense, speed,
+                    rubyPower,
+                    actionUUID,
+                    address(this),
+                    expiresAt
+                )
+            );
+            bool isValidSignature = MetaInfoDb(metaInfoDbAddr).isValidSignature(messageHash,signPublicKey,_v,_r,_s);
+            require(isValidSignature,"signature error");
+        }
+        //DragonInfo storage info=fields[tokenId];
+        uint256 [INFO_FIELDS_COUNT] storage info=fields[tokenId];
 
+        info[LEVEL]=level;
+        info[LIFE_VALUE]=life;
+        info[ATTACK_VALUE]=attack;
+        info[DEFENSE_VALUE]=defense;
+        info[SPEED_VALUE]=speed;
+        info[INIT_STAKING_RUBY_POWER]=rubyPower;
 
+        lastEventSeqNum.increment();
+        emit  DragonStateChanged(tokenId,level,life,attack,defense,speed,rubyPower,lastEventSeqNum.current());
+    }
 
     function updateStateBatch(uint256[] calldata stateArray,uint256 expiresAt, bytes16 actionUUID, uint8 _v, bytes32 _r, bytes32 _s) external {
         //require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "DragonNFT: must have admin role");

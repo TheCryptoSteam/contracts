@@ -21,11 +21,11 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
 import "./MetaInfoDb.sol";
 
-contract MarketPlace is AccessControlEnumerable
+contract MarketPlace is Context
 {
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.UintSet;
@@ -58,9 +58,13 @@ contract MarketPlace is AccessControlEnumerable
     event CancelSellOrder(address nftAddr, uint256 tokenId,address owner,uint256 indexed eventSeqNum);
     event NewTrade(address nftAddr, uint256 tokenId,uint256 indexed eventSeqNum);
 
-    constructor(address metaInfoDbAddr_) {
+    constructor(address metaInfoDbAddr_,address [] memory nftAddrArray) {
         metaInfoDbAddr=metaInfoDbAddr_;
-        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+	
+		for(uint256 i=0;i<nftAddrArray.length;++i){
+            supportNFTs.add(nftAddrArray[i]);
+        }
+
     }
 
     function sell(address nftAddr, uint256 tokenId, address priceToken, uint256 price, uint256 validPeriod) external{
@@ -127,13 +131,6 @@ contract MarketPlace is AccessControlEnumerable
 
         lastEventSeqNum.increment();
         emit NewTrade(nftAddr,tokenId,lastEventSeqNum.current());
-    }
-
-    function addNFTs(address [] calldata nftAddrArray) external  {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MarketPlace: must have admin role to addNFTs");
-        for(uint256 i=0;i<nftAddrArray.length;++i){
-            supportNFTs.add(nftAddrArray[i]);
-        }
     }
 
     function supportNFTCount() view public returns(uint256) {

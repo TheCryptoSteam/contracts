@@ -28,4 +28,8 @@ contract ChestToken is ERC20PresetMinterPauserEx
         kind=kind_;
     }
 
+    function decimals() public view virtual override returns (uint8) {
+        return 0;
+    }
 }
+
