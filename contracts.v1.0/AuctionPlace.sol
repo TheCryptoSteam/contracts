@@ -22,13 +22,13 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "./MetaInfoDb.sol";
 
-contract AuctionPlace is Context,AccessControlEnumerable{
+contract AuctionPlace is AccessControlEnumerable{
 
     address public moneyTokenAddr;
     address immutable nftAddr;
     address public metaInfoDbAddr;
     address public signPublicKey;
-    mapping(bytes16=>uint256) public actionUUIDs;
+    mapping(bytes32=>uint256) public usedSignatures;
 
     struct Auction{
         uint256 tokenId; //nft token id
@@ -137,6 +137,7 @@ contract AuctionPlace is Context,AccessControlEnumerable{
         }
     }
 
+
     function auctionEnd(uint256 tokenId, bytes16 actionUUID, uint8 _v, bytes32 _r, bytes32 _s) public {
 
 
@@ -149,22 +150,22 @@ contract AuctionPlace is Context,AccessControlEnumerable{
         require(!currAuction.ended, "AuctionPlace: auctionEnd has already been called.");
         MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
 
-        require(actionUUIDs[actionUUID]==0,"AuctionPlace: action has been executed");
+        bytes32 messageHash =  keccak256(
+            abi.encodePacked(
+                signPublicKey,
+                tokenId,
+                actionUUID,
+                "auctionEnd",
+                address(this)
+            )
+        );
+        require(usedSignatures[messageHash]==0,"AuctionPlace: action has been executed");
+
         if (!hasRole(DEFAULT_ADMIN_ROLE, _msgSender())){
-            bytes32 messageHash =  keccak256(
-                abi.encodePacked(
-                    signPublicKey,
-                    tokenId,
-                    actionUUID,
-                    "auctionEnd",
-                    address(this)
-                )
-            );
             bool isValidSignature = metaInfo.isValidSignature(messageHash,signPublicKey,_v,_r,_s);
             require(isValidSignature,"AuctionPlace: signature error");
         }
-        actionUUIDs[actionUUID]=block.timestamp;
-
+        usedSignatures[messageHash]=block.timestamp;
 
         // Effects
         currAuction.ended = true;

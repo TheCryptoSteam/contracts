@@ -44,7 +44,7 @@ contract AccountInfo is AccessControl
     mapping(address=>Info) public infos;
     mapping(address=>mapping(string =>string)) extInfos;
 
-    mapping(bytes16=>uint256) public actionUUIDs;
+    mapping(bytes32=>uint256) public usedSignatures;
 
     mapping(address=>EnumerableSet.UintSet) hatchingNestsSet ;
 
@@ -107,46 +107,46 @@ contract AccountInfo is AccessControl
     }
 
     function removeFoodPoints(address account,uint256 value, bytes16 actionUUID, uint8 _v, bytes32 _r, bytes32 _s) public{
+        bytes32 messageHash =  keccak256(
+            abi.encodePacked(
+                signPublicKey,
+                account,
+                value,
+                actionUUID,
+                "removeFoodPoints",
+                address(this)
+            )
+        );
+        require(usedSignatures[messageHash]==0,"AccountInfo: action has been executed");
         if (!hasRole(DEFAULT_ADMIN_ROLE, _msgSender())){
-            require(actionUUIDs[actionUUID]==0,"AccountInfo: action has been executed");
-            bytes32 messageHash =  keccak256(
-                abi.encodePacked(
-                    signPublicKey,
-                    account,
-                    value,
-                    actionUUID,
-                    "removeFoodPoints",
-                    address(this)
-                )
-            );
             MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
             bool isValidSignature = metaInfo.isValidSignature(messageHash,signPublicKey,_v,_r,_s);
             require(isValidSignature,"AccountInfo: signature error");
-            actionUUIDs[actionUUID]=block.timestamp;
         }
+        usedSignatures[messageHash]=block.timestamp;
         infos[account].foodPoints-=value;
         lastEventSeqNum.increment();
         emit AccountFoodsChanged(account,infos[account].foodPoints,lastEventSeqNum.current());
     }
 
     function addFoodPoints(address account,uint256 value, bytes16 actionUUID, uint8 _v, bytes32 _r, bytes32 _s) public{
+        bytes32 messageHash =  keccak256(
+            abi.encodePacked(
+                signPublicKey,
+                account,
+                value,
+                actionUUID,
+                "addFoodPoints",
+                address(this)
+            )
+        );
+        require(usedSignatures[messageHash]==0,"AccountInfo: action has been executed");
         if (!hasRole(DEFAULT_ADMIN_ROLE, _msgSender())){
-            require(actionUUIDs[actionUUID]==0,"AccountInfo: action has been executed");
-            bytes32 messageHash =  keccak256(
-                abi.encodePacked(
-                    signPublicKey,
-                    account,
-                    value,
-                    actionUUID,
-                    "addFoodPoints",
-                    address(this)
-                )
-            );
             MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
             bool isValidSignature = metaInfo.isValidSignature(messageHash,signPublicKey,_v,_r,_s);
             require(isValidSignature,"AccountInfo: signature error");
-            actionUUIDs[actionUUID]=block.timestamp;
         }
+        usedSignatures[messageHash]=block.timestamp;
         infos[account].foodPoints+=value;
         lastEventSeqNum.increment();
         emit AccountFoodsChanged(account,infos[account].foodPoints,lastEventSeqNum.current());

@@ -24,7 +24,7 @@ contract RubyToken is ERC20PresetMinterPauserEx
     address public signPublicKey ;
     address public metaInfoDbAddr;
 
-    mapping(bytes16=>uint256) public actionUUIDs;
+    mapping(bytes32=>uint256) public usedSignatures;
 
 
     constructor(address signPublicKey_)
@@ -44,7 +44,6 @@ contract RubyToken is ERC20PresetMinterPauserEx
     }
 
     function mint(uint256 amount, bytes16 actionUUID,uint8 _v, bytes32 _r, bytes32 _s) public {
-        require(actionUUIDs[actionUUID]==0,"AccountInfo: action has been executed");
 
         bytes32 messageHash =  keccak256(
             abi.encodePacked(
@@ -55,11 +54,12 @@ contract RubyToken is ERC20PresetMinterPauserEx
                 address(this)
             )
         );
+        require(usedSignatures[messageHash]==0,"AccountInfo: action has been executed");
         MetaInfoDb metaInfo=MetaInfoDb(metaInfoDbAddr);
         bool isValidSignature = metaInfo.isValidSignature(messageHash,signPublicKey,_v,_r,_s);
         require(isValidSignature,"signature error");
 
-        actionUUIDs[actionUUID]=block.timestamp;
+        usedSignatures[messageHash]=block.timestamp;
         _mint(_msgSender(),amount);
     }
 

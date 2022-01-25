@@ -58,7 +58,7 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
     address public metaInfoDbAddr;
     address public signPublicKey;
 
-    mapping(bytes16=>uint256) public actionUUIDs;
+    mapping(bytes32=>uint256) public usedSignatures;
 
     mapping(uint256/** tokenId */=>uint256 [INFO_FIELDS_COUNT])  public fields;
     mapping(uint256/** tokenId */=>uint256 [INFO_FIELDSEX_COUNT])  public fieldsEx;
@@ -409,63 +409,26 @@ contract DragonNFT is PresetMinterPauserAutoIdNFT
         //delete heredityInfos[tokenId];
     }
 
-
-
-    function updateState(uint256 tokenId,uint256 level, uint256 life,uint256 attack,uint256 defense,uint256 speed,uint256 rubyPower,uint256 expiresAt, bytes16 actionUUID, uint8 _v, bytes32 _r, bytes32 _s) public {
-        //require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "DragonNFT: must have admin role");
-        if (!hasRole(DEFAULT_ADMIN_ROLE, _msgSender())){
-            require(actionUUIDs[actionUUID]==0,"AccountInfo: action has been executed");
-            require(expiresAt > block.timestamp, "time expired");
-            bytes32 messageHash =  keccak256(
-                abi.encodePacked(
-                    signPublicKey,
-                    tokenId,
-                    "updateState",
-                    level,
-                    life, attack, defense, speed,
-                    rubyPower,
-                    actionUUID,
-                    address(this),
-                    expiresAt
-                )
-            );
-            bool isValidSignature = MetaInfoDb(metaInfoDbAddr).isValidSignature(messageHash,signPublicKey,_v,_r,_s);
-            require(isValidSignature,"signature error");
-        }
-        //DragonInfo storage info=fields[tokenId];
-        uint256 [INFO_FIELDS_COUNT] storage info=fields[tokenId];
-
-        info[LEVEL]=level;
-        info[LIFE_VALUE]=life;
-        info[ATTACK_VALUE]=attack;
-        info[DEFENSE_VALUE]=defense;
-        info[SPEED_VALUE]=speed;
-        info[INIT_STAKING_RUBY_POWER]=rubyPower;
-
-        lastEventSeqNum.increment();
-        emit  DragonStateChanged(tokenId,level,life,attack,defense,speed,rubyPower,lastEventSeqNum.current());
-    }
-
     function updateStateBatch(uint256[] calldata stateArray,uint256 expiresAt, bytes16 actionUUID, uint8 _v, bytes32 _r, bytes32 _s) external {
         //require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "DragonNFT: must have admin role");
         require(stateArray.length % 7 == 0, "DragonNFT: wrong length of data");
+        require(expiresAt > block.timestamp, "time expired");
+        bytes32 messageHash =  keccak256(
+            abi.encodePacked(
+                signPublicKey,
+                stateArray,
+                actionUUID,
+                "updateState",
+                address(this),
+                expiresAt
+            )
+        );
+        require(usedSignatures[messageHash]==0,"AccountInfo: action has been executed");
         if (!hasRole(DEFAULT_ADMIN_ROLE, _msgSender())){
-            require(actionUUIDs[actionUUID]==0,"AccountInfo: action has been executed");
-            require(expiresAt > block.timestamp, "time expired");
-            bytes32 messageHash =  keccak256(
-                abi.encodePacked(
-                    signPublicKey,
-                    stateArray,
-                    actionUUID,
-                    "updateState",
-                    address(this),
-                    expiresAt
-                )
-            );
-            
             bool isValidSignature = MetaInfoDb(metaInfoDbAddr).isValidSignature(messageHash,signPublicKey,_v,_r,_s);
             require(isValidSignature,"signature error");
         }
+        usedSignatures[messageHash]=block.timestamp;
         //DragonInfo storage info=fields[tokenId];
         for (uint256 i=0; i<stateArray.length; ) {
             uint256 tokenId = stateArray[i++];
